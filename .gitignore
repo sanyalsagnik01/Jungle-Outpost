@@ -1,4 +1,6 @@
 *.blend1
+__pycache__/
+models/src/preview/
 .DS_Store
 Thumbs.db
 node_modules/

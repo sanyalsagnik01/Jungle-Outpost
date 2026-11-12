@@ -18,6 +18,46 @@ var P = JO.Player = {
 };
 
 P.init = function (scene) { P.model = M.player(); scene.add(P.model.g); };
+
+/* ---------- GLB presentation (optional; the primitive model above stays as the fallback) ---------- */
+P.gfx = null; P.wpn = []; P.wpnCur = -1; P.deadT = 0;
+var WPN_MODELS = ['ar', 'shotgun', 'marksman'], tmpV = new THREE.Vector3();
+P.attachModels = function () {
+  var As = JO.Assets, g = P.model.g, k = As.instantiate('kade'), i;
+  if (!k) return false;
+  for (i = 0; i < g.children.length; i++) g.children[i].visible = false;          // hide the box commando, keep its group as the anchor
+  g.add(k.root); P.gfx = k; P.chest = k.socket('chest'); P.handR = k.socket('socket_hand.R');
+  for (i = 0; i < WPN_MODELS.length; i++) {
+    var w = As.instantiate(WPN_MODELS[i]);
+    if (!w) {                                                                      // that weapon's GLB is missing: hand him a plain box gun
+      var gun = new THREE.Mesh(JO.World.G.box, P.model.mats.dark); gun.scale.set(0.07, 0.11, 0.8); gun.position.set(0, 0.03, 0.22); gun.castShadow = true;
+      w = { name: WPN_MODELS[i] + ' (primitive)', tris: 12, root: new THREE.Group(), socket: function () { return null; } }; w.root.add(gun);
+    }
+    w.root.visible = false; g.add(w.root); w.muzzle = w.socket('muzzle'); P.wpn[i] = w;
+  }
+  P.wpnCur = -1; return true;
+};
+// per rendered frame: pick the locomotion clip, advance the mixer, aim the torso and seat the weapon in the hand
+P.animate = function (dt) {
+  var k = P.gfx, i; if (!k) return;
+  var aim = P.pitch + P.kick;
+  if (P.dead) { P.deadT += dt; k.setDissolve((P.deadT - 0.95) / 0.5); }
+  else {
+    var sp = Math.hypot(P.vx, P.vz), moving = sp > 0.4 && P.onGround && P.rolling <= 0;
+    if (!moving) k.play('idle', 1);
+    else if (I.ads || sp < 4.2) k.play('walk', Math.min(1.7, Math.max(0.7, sp / 1.9)));
+    else k.play('run', Math.min(1.6, sp / 4.2));
+  }
+  k.update(dt);
+  if (P.chest && !P.dead) P.chest.rotateX(-aim * 0.55);
+  var cur = P.dead ? -1 : JO.Weapons.cur, w = P.wpn[cur];
+  if (cur !== P.wpnCur) { for (i = 0; i < P.wpn.length; i++) if (P.wpn[i]) P.wpn[i].root.visible = i === cur; P.wpnCur = cur; }
+  if (w && P.handR) { P.model.g.updateMatrixWorld(true); P.handR.getWorldPosition(tmpV); P.model.g.worldToLocal(tmpV); w.root.position.copy(tmpV); w.root.rotation.set(-aim, 0, 0); }
+};
+P.muzzle = function (out) {
+  var w = P.wpn[P.wpnCur]; if (!w || !w.muzzle || P.rolling > 0) return false;
+  w.muzzle.getWorldPosition(out); return true;
+};
 P.resetRun = function () {
   P.up = { hp: 0, fire: 0, reload: 0, plate: 0, mag: 0, stam: 0 }; P.maxHp = PC.hp; P.maxPlates = 1; P.hp = P.maxHp; P.armor = 0;
 };
@@ -25,6 +65,7 @@ P.place = function (x, z) {
   P.pos.set(x, 0, z); P.prev.copy(P.pos); P.vx = P.vy = P.vz = P.kx = P.kz = 0; P.yaw = Math.PI; P.pitch = -0.05; P.kick = 0;
   P.rolling = 0; P.rollCd = 0; P.invuln = 0; P.dead = false; P.onGround = true; P.stamina = PC.stamina; P.sinceDmg = 99;
   P.model.g.visible = true; P.model.g.rotation.set(0, P.yaw, 0); P.model.g.position.copy(P.pos);
+  P.deadT = 0; if (P.gfx) { P.gfx.reset(); P.gfx.play('idle', 1); P.wpnCur = -2; }
 };
 P.armorCap = function () { return P.maxPlates * PC.plateValue; };
 P.applyUpgrade = function (id) {
@@ -51,14 +92,15 @@ P.damage = function (amt, sx, sz, tag) {
   if (P.armor > 0) { var a = Math.min(P.armor, amt); P.armor -= a; amt -= a; A.play('armor'); }
   if (amt > 0) { P.hp -= amt; A.play('hurt'); }
   P.sinceDmg = 0; JO.UI.hurt(sx, sz); FX.addShake(Math.min(0.5, 0.12 + amt * 0.015));
-  if (P.hp <= 0) { P.hp = 0; P.dead = true; P.rolling = 0; A.play('die'); Gm.onPlayerDead(); }
+  if (P.gfx) { P.gfx.flash(0x992a1a, 0.1); if (JO.Weapons.reloading <= 0) P.gfx.playOnce('hit'); }
+  if (P.hp <= 0) { P.hp = 0; P.dead = true; P.rolling = 0; P.deadT = 0; A.play('die'); if (P.gfx) P.gfx.playOnce('death', { full: true, hold: true }); Gm.onPlayerDead(); }
   return true;
 };
 P.knock = function (x, z) { P.kx += x; P.kz += z; };
 
 P.update = function (dt) {
   P.prev.copy(P.pos);
-  if (P.dead) { P.model.g.rotation.x = Math.max(-1.5, P.model.g.rotation.x - dt * 4); return; }
+  if (P.dead) { if (!P.gfx) P.model.g.rotation.x = Math.max(-1.5, P.model.g.rotation.x - dt * 4); else { P.model.g.rotation.x = 0; P.model.g.scale.setScalar(1); } return; }
   var mx = I.moveX, my = I.moveY, len = Math.hypot(mx, my);
   if (len > 1) { mx /= len; my /= len; len = 1; }
   var sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
@@ -122,7 +164,7 @@ Cam.compute = function (alpha, frameDt) {
   if (frameDt) { var tk = (I.ads && !P.dead) ? 1 : 0; Cam.adsK += (tk - Cam.adsK) * Math.min(1, frameDt * 12); }
   var k = Cam.adsK, pitch = P.pitch + P.kick, cp = Math.cos(pitch), sp = Math.sin(pitch), sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
   var fx = sy * cp, fy = sp, fz = cy * cp, rx = -cy, rz = sy;
-  var want = 4.7 - 2.5 * k, sh = 0.95 - 0.3 * k;
+  var want = 4.7 - 2.2 * k, sh = 0.95 + 0.05 * k;
   var vx = px + rx * sh, vy = py + 1.58, vz = pz + rz * sh;                    // pivot
   var ox = -fx * want, oy = -fy * want + 0.28, oz = -fz * want, len = Math.sqrt(ox * ox + oy * oy + oz * oz);
   ox /= len; oy /= len; oz /= len;
@@ -171,11 +213,13 @@ Wp.current = function () { return Wp.slots[Wp.cur]; };
 function startReload() {
   var s = Wp.slots[Wp.cur]; if (Wp.reloading > 0 || s.mag >= Wp.magSize(Wp.cur) || s.reserve <= 0) return;
   Wp.reloadTotal = Wp.reloading = s.cfg.reload * (1 - Math.min(0.6, 0.25 * P.up.reload)); A.play('reload');
+  if (P.gfx && P.gfx.shots.reload) P.gfx.playOnce('reload', { timeScale: P.gfx.shots.reload.duration / Wp.reloading });
 }
 Wp.reloadTotal = 1;
 function trySwitch(n) {
   if (n === -1) { for (var k = 1; k <= 3; k++) { var j = (Wp.cur + k) % 3; if (Wp.slots[j].unlocked) { n = j + 1; break; } } }
   var i = n - 1; if (i < 0 || i > 2 || i === Wp.cur || !Wp.slots[i].unlocked) return;
+  if (Wp.reloading > 0 && P.gfx) P.gfx.stopShot();
   Wp.cur = i; Wp.reloading = 0; Wp.cd = Math.max(Wp.cd, 0.28); Wp.bloom = 0; A.play('swap');
 }
 Wp.switchTo = trySwitch;
@@ -203,6 +247,8 @@ function shoot(s) {
   A.play(c.id);
   var sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
   var mx = P.pos.x - cy * 0.28 + sy * 0.95, my = P.pos.y + 1.33 + Cam.fy * 0.6, mz = P.pos.z + sy * 0.28 + cy * 0.95;
+  if (P.muzzle(tmpV)) { mx = tmpV.x; my = tmpV.y; mz = tmpV.z; }
+  if (P.gfx) P.gfx.playOnce('shoot', { timeScale: 1.5 });
   FX.muzzleFlash(mx, my, mz, c.id === 'sg' ? 0.85 : (c.id === 'mr' ? 0.7 : 0.5));
   var spread = (I.ads ? c.adsSpread : c.spread) + Wp.bloom + (P.onGround ? 0 : 1.5);
   var anyHit = false, head = false, killed = false, crit = false, n = 0, start = Cam.dist + 0.2;

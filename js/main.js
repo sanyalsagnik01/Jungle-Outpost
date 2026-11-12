@@ -197,12 +197,39 @@ function tick(real) {
     if (cam.fov !== 65) { cam.fov = 65; cam.updateProjectionMatrix(); }
     W.update(real); W.updateSun(0, z - 10);
   } else {
-    Cam.compute(alpha, real); Cam.apply(cam); P.model.g.visible = Cam.dist > 1.25; W.update(fdt); FX.update(fdt, W.time); W.updateSun(P.pos.x, P.pos.z);
+    Cam.compute(alpha, real); Cam.apply(cam); P.animate(fdt); P.model.g.visible = Cam.dist > 1.25; W.update(fdt); FX.update(fdt, W.time); W.updateSun(P.pos.x, P.pos.z);
     UI.update(real, cam);
   }
   A.update(real);
+  if (dbgOn) { dbgT -= real; if (dbgT <= 0) { dbgT = 0.2; debugOverlay(real); } }
   if (!Game.debug.noRender) W.renderer.render(W.scene, cam);
 }
+
+/* ---------- debug overlay (F3): what is under the crosshair, and what the asset layer loaded ---------- */
+var dbgOn = false, dbgT = 0, dbgEl = null, DH = { t: 0, enemy: null, part: null, missile: null }, fpsAvg = 60;
+function countTris(obj) {
+  if (obj.userData.joTris === undefined) { var n = 0; obj.traverse(function (o) { if (o.isMesh && o.geometry) { var g = o.geometry; n += (g.index ? g.index.count : g.attributes.position.count) / 3; } }); obj.userData.joTris = Math.round(n); }
+  return obj.userData.joTris;
+}
+function describe(label, gfx, mesh, state) {
+  return label + '\n  model: ' + (gfx ? gfx.name + '.glb' : 'primitive (built-in)') + '\n  triangles: ' + (gfx ? gfx.tris : countTris(mesh)) + '\n  animation: ' + (gfx ? gfx.activeClip() : state);
+}
+function debugOverlay(real) {
+  fpsAvg += (1 / Math.max(0.001, real) - fpsAvg) * 0.2;
+  var txt;
+  if (Game.state === 'playing' || Game.state === 'dying') {
+    var s = Cam.dist + 0.2; E.hitscan(Cam.x + Cam.fx * s, Cam.y + Cam.fy * s, Cam.z + Cam.fz * s, Cam.fx, Cam.fy, Cam.fz, 250, DH);
+    var e = DH.enemy;
+    txt = e ? describe('CROSSHAIR: ' + (e.isBoss ? e.name : e.type) + '  (' + DH.t.toFixed(1) + ' m, part ' + DH.part.tag + ')', e.gfx, e.mesh, 'state ' + e.state + (e.sub ? ' / ' + e.sub : ''))
+            : describe('CROSSHAIR: nothing — showing PLAYER', P.gfx, P.model.g, 'procedural walk');
+    var w = P.wpn[P.wpnCur]; if (w) txt += '\nweapon: ' + w.name + (w.entry ? '.glb' : '') + ', ' + w.tris + ' tris';
+  } else txt = 'start a level to inspect models';
+  var info = W.renderer.info.render;
+  dbgEl.textContent = txt + '\n\nASSETS\n  ' + JO.Assets.summary().join('\n  ') + '\n\n' + Math.round(fpsAvg) + ' fps (sampled) · ' + info.calls + ' draw calls · ' + info.triangles + ' tris on screen\nF3 hides this panel';
+}
+Game.toggleDebug = function (on) {
+  dbgOn = on === undefined ? !dbgOn : on; dbgEl = dbgEl || document.getElementById('dbg'); dbgEl.classList.toggle('hidden', !dbgOn); dbgT = 0;
+};
 
 /* ---------- boot ---------- */
 function bind(id, fn) { document.getElementById(id).addEventListener('click', function (e) { A.init(); A.play('ui'); fn(e); }); }
@@ -211,6 +238,14 @@ Game.init = function () {
   W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas);
   FX.pMat.uniforms.uScale.value = window.innerHeight;
   W.build(CFG.LEVELS[0]); P.model.g.visible = false;                       // title backdrop
+  // models load behind the title screen; whatever fails simply stays primitive
+  var bar = document.getElementById('loadFill'), ltx = document.getElementById('loadTxt'), startBtn = document.getElementById('btnStart');
+  startBtn.disabled = true;
+  JO.Assets.loadAll(function (done, total, name) { bar.style.transform = 'scaleX(' + (done / total) + ')'; ltx.textContent = 'LOADING MODELS  ' + done + ' / ' + total; },
+    function () { var bad = JO.Assets.total - Object.keys(JO.Assets.entries).length; P.attachModels(); P.model.g.visible = false; startBtn.disabled = false;
+      ltx.textContent = bad ? (JO.Assets.total - bad) + ' / ' + JO.Assets.total + ' MODELS LOADED — ' + bad + ' USING BUILT-IN SHAPES' : 'ALL ' + JO.Assets.total + ' MODELS LOADED';
+      document.getElementById('loadWrap').classList.add('done'); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'F3') { e.preventDefault(); Game.toggleDebug(); } });
   I.onLook = P.look; var pauseAt = 0;
   function togglePause() { var n = performance.now(); if (n - pauseAt < 350) return; pauseAt = n; if (Game.state === 'playing' || Game.state === 'paused') Game.pause(); }
   I.onPause = togglePause;

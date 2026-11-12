@@ -83,6 +83,13 @@ canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block}
   color:var(--bone);font-size:18px;cursor:pointer}
 #topR button:focus-visible{outline:2px solid var(--amber)}
 
+#loadWrap{width:min(360px,70vw);margin:0 0 16px;font-family:var(--mono);font-size:11px;letter-spacing:3px;opacity:.9;transition:opacity .6s}
+#loadWrap.done{opacity:.55}
+#loadBar{height:6px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);margin-bottom:6px}
+#loadFill{display:block;height:100%;background:var(--amber);transform:scaleX(0);transform-origin:left center;transition:transform .2s}
+.btn:disabled{opacity:.4;cursor:wait;transform:none}
+#dbg{position:fixed;left:14px;top:110px;z-index:35;margin:0;padding:10px 12px;background:rgba(0,0,0,.72);border-left:3px solid var(--cyan);color:#cfeee8;font:11px/1.45 var(--mono);pointer-events:none;white-space:pre;max-width:46vw;overflow:hidden}
+
 /* ---------- touch ---------- */
 #touch{position:fixed;inset:0;pointer-events:none;z-index:20}
 #touch .zone{position:absolute;bottom:0;top:0;pointer-events:auto}
@@ -182,6 +189,8 @@ body.touch #prompt{top:40%}
   <div id="tUse" class="tbtn hidden" data-act="use">USE</div>
 </div>
 
+<pre id="dbg" class="hidden"></pre>
+
 <div id="topR">
   <button id="btnMute" title="Mute (M)" aria-label="Toggle sound">&#9835;</button>
   <button id="btnPause" title="Pause (Esc)" aria-label="Pause" class="hidden">II</button>
@@ -190,6 +199,7 @@ body.touch #prompt{top:40%}
 <div id="scrTitle" class="screen clear">
   <h1 class="logo">JUNGLE<span>OUTPOST</span></h1>
   <div class="tag">ONE COMMANDO &middot; THREE BOSSES &middot; NO EXTRACTION UNTIL IT'S DONE</div>
+  <div id="loadWrap"><div id="loadBar"><i id="loadFill"></i></div><div id="loadTxt">LOADING MODELS</div></div>
   <button class="btn" id="btnStart">START MISSION</button>
   <button class="btn ghost" id="btnControls">CONTROLS</button>
   <div class="row diff" id="diffRow">
@@ -250,12 +260,16 @@ body.touch #prompt{top:40%}
 
 <script src="lib/three.min.js"></script>
 <script>window.THREE||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');</script>
+<script src="lib/GLTFLoader.js"></script>
+<script src="lib/SkeletonUtils.js"></script>
+<script src="models/models.bundle.js"></script>
 <script src="js/config.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/input.js"></script>
 <script src="js/world.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/models.js"></script>
+<script src="js/assets.js"></script>
 <script src="js/player.js"></script>
 <script src="js/hazards.js"></script>
 <script src="js/enemies.js"></script>
