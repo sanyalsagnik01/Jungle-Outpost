@@ -33,6 +33,11 @@ function initPickups(scene) {
     pickups.push({ active: false, g: g, kinds: { ammo: a, health: h, armor: p }, type: '', x: 0, z: 0, t: 0 });
   }
 }
+// swap the box pickups for their GLB versions once models are in
+function upgradePickups() {
+  for (var i = 0; i < pickups.length; i++) for (var k in pickups[i].kinds) { var m = JO.Assets.instantiate('pk_' + k); if (!m) continue;
+    var grp = pickups[i].kinds[k], c; for (c = 0; c < grp.children.length; c++) grp.children[c].visible = false; m.root.scale.setScalar(1.25); m.root.position.y = -0.25; grp.add(m.root); }
+}
 Game.spawnPickup = function (type, x, z) {
   for (var i = 0; i < pickups.length; i++) { var p = pickups[i]; if (p.active) continue;
     p.active = true; p.type = type; p.x = Math.max(-W.halfWidth(z) + 1, Math.min(W.halfWidth(z) - 1, x)); p.z = z; p.t = Math.random() * 6;
@@ -242,7 +247,9 @@ Game.init = function () {
   var bar = document.getElementById('loadFill'), ltx = document.getElementById('loadTxt'), startBtn = document.getElementById('btnStart');
   startBtn.disabled = true;
   JO.Assets.loadAll(function (done, total, name) { bar.style.transform = 'scaleX(' + (done / total) + ')'; ltx.textContent = 'LOADING MODELS  ' + done + ' / ' + total; },
-    function () { var bad = JO.Assets.total - Object.keys(JO.Assets.entries).length; P.attachModels(); P.model.g.visible = false; startBtn.disabled = false;
+    function () { var bad = JO.Assets.total - Object.keys(JO.Assets.entries).length; P.attachModels(); upgradePickups(); startBtn.disabled = false;
+      if (Game.state === 'title') W.build(CFG.LEVELS[0]);                    // rebuild the backdrop with GLB scenery
+      P.model.g.visible = false;
       ltx.textContent = bad ? (JO.Assets.total - bad) + ' / ' + JO.Assets.total + ' MODELS LOADED — ' + bad + ' USING BUILT-IN SHAPES' : 'ALL ' + JO.Assets.total + ' MODELS LOADED';
       document.getElementById('loadWrap').classList.add('done'); });
   window.addEventListener('keydown', function (e) { if (e.code === 'F3') { e.preventDefault(); Game.toggleDebug(); } });

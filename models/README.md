@@ -25,6 +25,20 @@ Every model here is built by a Python script in `models/src/` running inside Ble
 | `phantom.glb` | The Phantom, 2.2 m. Cloak on a `cloak` bone; blades are a separate mesh `knives` | 1,484 | 12,000 | the eight humanoid clips plus `phase_change`, `special` |
 | `commander.glb` | The Commander's walker, 6.5 m wide. Separate meshes: `panel_front`, `panel_L`, `panel_R`, `fx_core` | 2,508 | 12,000 | the eight humanoid clip names plus `phase_change`, `special` |
 
+| `mira.glb` | Mira, 1.85 m, lab coat and data pad | 1,376 | 5,000 | the eight humanoid clips |
+| `bloom.glb` | The Lumen Bloom, 2.3 m. Glowing head is `fx_glow` | 388 | 800 | none |
+| `env_tree_a/b/c.glb` | Broadleaf, conifer, palm. `trunk` + `tint_canopy` | 116 / 92 / 332 | 800 | none |
+| `env_bush`, `env_rock`, `env_vine` | Ground cover and hanging vines | 60 / 40 / 192 | 800 | none |
+| `env_pillar`, `env_wall` | Ruin pillar and wall segment | 204 / 268 | 800 | none |
+| `env_bridge.glb` | 16 m plank bridge with rope rails | 1,216 | 1,300 (over the 800 prop budget; it is one large piece) | none |
+| `env_tower`, `env_sandbag`, `env_crate`, `env_barrel` | Watchtower, sandbag wall, crate, explosive barrel | 350 / 352 / 116 / 256 | 800 | none |
+| `env_gate.glb` | Gate: `frame` + sliding `door` | 324 | 800 | none (the game moves `door`) |
+| `env_lever`, `env_terminal` | Lever (`base` + `handle`), hack terminal (`fx_screen`) | 100 / 136 | 800 | none |
+| `env_building`, `env_searchlight` | Outpost hut; searchlight (`base`, `head`, `fx_lens`) | 308 / 148 | 800 | none |
+| `env_jeep`, `env_boat` | Jeep and river boat, each with a separate `turret` | 680 / 344 | 800 | none |
+| `pk_ammo`, `pk_health`, `pk_armor` | Pickups | 160 / 92 / 112 | 800 | none |
+| `pk_intel`, `pk_idol` | Intel data pad (`fx_screen`), hidden idol (`fx_eyes`) | 68 / 192 | 800 | none |
+
 "The eight humanoid clips" are `idle`, `walk`, `run` (loops) and `shoot`, `reload`, `hit`, `death`, `attack`.
 
 Triangle counts were read back from the exported files, not from the source scene.
@@ -93,12 +107,18 @@ Movement speed picks `idle`, `walk` or `run`, speed-matched. Each bullet fired p
 
 The Phantom's cloaking is material opacity plus a wireframe copy of the mesh on the same skeleton.
 
+## Scenery instancing
+
+Trees, bushes, rocks, vines, pillars, walls, towers, sandbags, crates and the bridge are drawn as `InstancedMesh` batches, chunked along the path so frustum culling still works. Meshes named `tint_*` take a per-instance colour (the level's leaf palette); other meshes take a brightness only. Layout randomness and visual randomness use separate seeds, so a level has the same colliders whether a prop is drawn from its GLB or from the primitive fallback.
+
+Skies and ground detail are generated on a canvas at level load (gradient, sun or moon, clouds or stars; tileable ground speckle). They stand in for the Higgsfield skyboxes and textures, which were not generated because the account had no credits.
+
 ## Rebuilding
 
 In Blender's Python console (or through the Blender MCP):
 
 ```python
-p = r'<repo>\models\src\build_kade.py'      # or build_weapons.py, build_enemies.py, build_bosses.py
+p = r'<repo>\models\src\build_kade.py'      # or build_weapons.py, build_enemies.py, build_bosses.py, build_env.py
 exec(compile(open(p).read(), p, 'exec'), {'JO_SRC': p})
 ```
 
@@ -109,7 +129,3 @@ If you edit a `.glb` by hand, run `python tools/bundle_models.py` afterwards.
 ## Why there is a bundle
 
 Browsers will not let a page opened from disk (`file://`) fetch other files, so `GLTFLoader.load('models/kade.glb')` fails when you double-click `index.html`. The loader therefore reads base64 copies from `models.bundle.js` first, and only fetches the `.glb` files when the game is served over HTTP and the bundle lacks an entry.
-
-## Planned (later phases)
-
-Phase 3: environment kits, pickups, skyboxes. Story models (Mira, the Lumen Bloom) come with Phase 3 or 6.

@@ -40,8 +40,14 @@ A.manifest = {
   drone:     { file: 'models/drone.glb', kind: 'enemy', budget: 3500, clips: ['hover', 'dive'], loops: ['hover', 'dive'] },
   brute:     { file: 'models/brute.glb', kind: 'boss', budget: 12000, clips: BOSS, loops: LOCO },
   phantom:   { file: 'models/phantom.glb', kind: 'boss', budget: 12000, clips: BOSS, loops: LOCO },
-  commander: { file: 'models/commander.glb', kind: 'boss', budget: 12000, clips: BOSS, loops: LOCO }
+  commander: { file: 'models/commander.glb', kind: 'boss', budget: 12000, clips: BOSS, loops: LOCO },
+  mira:      { file: 'models/mira.glb', kind: 'npc', budget: 5000, clips: HUMAN, loops: LOCO }
 };
+// static props: instanced scenery (env_*), pickups (pk_*) and the Lumen Bloom
+['env_tree_a', 'env_tree_b', 'env_tree_c', 'env_bush', 'env_rock', 'env_vine', 'env_pillar', 'env_wall', 'env_bridge', 'env_tower', 'env_sandbag', 'env_crate', 'env_barrel',
+  'env_gate', 'env_lever', 'env_terminal', 'env_building', 'env_searchlight', 'env_jeep', 'env_boat', 'pk_ammo', 'pk_health', 'pk_armor', 'pk_intel', 'pk_idol', 'bloom'].forEach(function (n) {
+  A.manifest[n] = { file: 'models/' + n + '.glb', kind: 'prop', budget: n === 'env_bridge' ? 1300 : 800 };
+});
 // bones driven by upper-body overlays (three strips the dots: "upper_arm.L" -> "upper_armL")
 // (the walker's turret, gun and missile pods count as its "upper body")
 var UPPER = /^(spine|chest|head|upper_arm|forearm|hand|socket_hand|socket_back|shield|cloak|barrel|turret|gun|pod)/;
@@ -101,7 +107,12 @@ function prepare(name, def, gltf) {
     o.material = m; o.castShadow = true;
   });
   if (!tris) throw new Error('no meshes');
-  var e = { name: name, def: def, scene: gltf.scene, tris: Math.round(tris), skinned: skinned, clips: {}, missing: [] };
+  var e = { name: name, def: def, scene: gltf.scene, tris: Math.round(tris), skinned: skinned, clips: {}, missing: [], parts: null };
+  if (def.kind === 'prop') {                       // bake node transforms so the geometry can be instanced directly
+    e.parts = []; gltf.scene.updateMatrixWorld(true);
+    gltf.scene.traverse(function (o) { if (!o.isMesh) return; var g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld);
+      e.parts.push({ name: o.name, geometry: g, tint: o.name.indexOf('tint_') === 0, map: o.material.map }); });
+  }
   (gltf.animations || []).forEach(function (c) { e.clips[c.name] = layers(c); });
   (def.clips || []).forEach(function (c) { if (!e.clips[c]) e.missing.push(c); });
   if (e.missing.length && window.console) console.warn('[assets] ' + name + ' is missing clips: ' + e.missing.join(', '));
@@ -123,6 +134,8 @@ function layers(clip) {
 }
 
 A.has = function (name) { return !!A.entries[name]; };
+// parts of a static prop for instancing: [{ name, geometry, tint, map }] or null when the model is missing
+A.parts = function (name) { var e = A.entries[name]; return e && e.parts && e.parts.length ? e.parts : null; };
 A.instantiate = function (name) {
   var e = A.entries[name]; if (!e) return null;
   try { return new Model(e); } catch (err) { if (window.console) console.warn('[assets] instantiate ' + name + ' failed', err); return null; }

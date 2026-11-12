@@ -120,12 +120,20 @@ Batch.prototype.add = function (key, x, y, z, sx, sy, sz, color, ry, rx, rz) {
   var k = key + '|' + Math.max(0, Math.floor(-z / 70));
   (this.m[k] || (this.m[k] = [])).push(x, y, z, sx, sy, sz, color, ry || 0, rx || 0, rz || 0);
 };
+// instanced GLB prop: tint_* parts take `tint`, the rest take a neutral brightness `f`
+Batch.prototype.addModel = function (name, x, y, z, sx, sy, sz, tint, ry, f) {
+  var parts = JO.Assets.parts(name); if (!parts) return false;
+  f = f === undefined ? 1 : Math.min(1, f);
+  for (var i = 0; i < parts.length; i++) this.add('m~' + name + '~' + i, x, y, z, sx, sy, sz, parts[i].tint ? tint : (Math.round(f * 255) * 65793), ry);
+  return true;
+};
 Batch.prototype.build = function (group) {
   for (var k in this.m) {
     var a = this.m[k], n = a.length / 10, parts = k.split('|'), chunk = +parts[1];
-    var geo = G[parts[0]].clone();
+    var mp = parts[0].indexOf('m~') === 0 ? JO.Assets.parts(parts[0].split('~')[1])[+parts[0].split('~')[2]] : null;
+    var geo = (mp ? mp.geometry : G[parts[0]]).clone();
     geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 6, -(chunk + 0.5) * 70), 85);
-    var mat = this.kind === 'b' ? new THREE.MeshBasicMaterial(this.matOpts || {}) : new THREE.MeshLambertMaterial();
+    var mat = this.kind === 'b' ? new THREE.MeshBasicMaterial(this.matOpts || {}) : new THREE.MeshLambertMaterial(mp && mp.map ? { map: mp.map } : undefined);
     var mesh = new THREE.InstancedMesh(geo, mat, n);
     for (var i = 0; i < n; i++) { var o = i * 10;
       dummy.position.set(a[o], a[o + 1], a[o + 2]); dummy.scale.set(a[o + 3], a[o + 4], a[o + 5]);
@@ -136,6 +144,35 @@ Batch.prototype.build = function (group) {
     group.add(mesh); W.owned.push(geo, mat); this.mats.push(mat);
   }
 };
+// equirect sky: gradient, sun or moon, clouds / mist / stars
+function makeSky(pal, mood, sunDir) {
+  var w = 1024, h = 512, c = document.createElement('canvas'); c.width = w; c.height = h; var g = c.getContext('2d');
+  var top = '#' + ('00000' + pal.skyTop.toString(16)).slice(-6), fog = '#' + ('00000' + pal.fog.toString(16)).slice(-6);
+  var gr = g.createLinearGradient(0, 0, 0, h / 2); gr.addColorStop(0, top); gr.addColorStop(0.45, top); gr.addColorStop(1, fog); g.fillStyle = gr; g.fillRect(0, 0, w, h / 2);
+  g.fillStyle = fog; g.fillRect(0, h / 2 - 1, w, h / 2 + 1);
+  var r = mulberry(mood.length * 97 + 5), i, x, y;
+  if (mood === 'night') { for (i = 0; i < 420; i++) { x = r() * w; y = r() * h * 0.42; g.fillStyle = 'rgba(255,' + (220 + r() * 35 | 0) + ',' + (190 + r() * 60 | 0) + ',' + (0.3 + r() * 0.7) + ')'; g.fillRect(x, y, r() < 0.1 ? 2 : 1, r() < 0.1 ? 2 : 1); } }
+  // sun / moon at the light's direction (three SphereGeometry: u = atan2(z, -x) / 2pi)
+  var d = sunDir.clone().normalize(), u = Math.atan2(d.z, -d.x) / (Math.PI * 2); if (u < 0) u += 1;
+  var sx = u * w, sy = (1 - (Math.asin(d.y) / Math.PI + 0.5)) * h, rad = mood === 'day' ? 150 : (mood === 'dusk' ? 190 : 90);
+  var cols = mood === 'day' ? ['rgba(255,252,230,1)', 'rgba(255,240,180,0.45)'] : (mood === 'dusk' ? ['rgba(255,214,150,1)', 'rgba(255,150,80,0.4)'] : ['rgba(255,236,214,1)', 'rgba(255,150,90,0.28)']);
+  [-w, 0, w].forEach(function (o) { var rg = g.createRadialGradient(sx + o, sy, 0, sx + o, sy, rad); rg.addColorStop(0, cols[0]); rg.addColorStop(mood === 'night' ? 0.2 : 0.12, cols[0]); rg.addColorStop(mood === 'night' ? 0.24 : 0.2, cols[1]); rg.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = rg; g.fillRect(sx + o - rad, sy - rad, rad * 2, rad * 2); });
+  // cloud bands (drawn three times so they wrap)
+  var n = mood === 'day' ? 26 : (mood === 'dusk' ? 34 : 18), cc = mood === 'day' ? '255,255,255' : (mood === 'dusk' ? '214,232,226' : '70,30,24');
+  for (i = 0; i < n; i++) { x = r() * w; y = h * (0.2 + r() * 0.27); var cw = 60 + r() * 150, ch = 8 + r() * (mood === 'dusk' ? 10 : 20), a = (mood === 'day' ? 0.5 : 0.35) * (0.4 + r() * 0.6);
+    for (var k = 0; k < 4; k++) { var ox = (r() - 0.5) * cw * 0.6, oy = (r() - 0.5) * ch * 0.6; [-w, 0, w].forEach(function (o) { g.fillStyle = 'rgba(' + cc + ',' + (a * 0.6) + ')'; g.beginPath(); g.ellipse(x + ox + o, y + oy, cw * (0.3 + r() * 0.3), ch * (0.5 + r() * 0.5), 0, 0, 6.3); g.fill(); }); } }
+  if (mood === 'night') { var hg = g.createLinearGradient(0, h * 0.36, 0, h / 2); hg.addColorStop(0, 'rgba(255,90,30,0)'); hg.addColorStop(1, 'rgba(255,90,30,0.28)'); g.fillStyle = hg; g.fillRect(0, h * 0.36, w, h * 0.14); }
+  var t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; return t;
+}
+function makeGroundTex(mood, seed) {
+  var s = 128, c = document.createElement('canvas'); c.width = c.height = s; var g = c.getContext('2d'), r = mulberry(seed * 13 + 1), i;
+  g.fillStyle = '#dcdcdc'; g.fillRect(0, 0, s, s);
+  for (i = 0; i < 520; i++) { var v = 170 + (r() * 85 | 0), x = r() * (s - 5) | 0, y = r() * (s - 7) | 0; g.fillStyle = 'rgb(' + v + ',' + v + ',' + v + ')';
+    if (mood === 'day') g.fillRect(x, y, 1 + (r() * 2 | 0), 3 + (r() * 4 | 0)); else g.fillRect(x, y, 2 + (r() * 4 | 0), 1 + (r() * 3 | 0)); }
+  for (i = 0; i < 26; i++) { g.fillStyle = 'rgba(120,120,120,0.35)'; g.beginPath(); g.arc(6 + r() * (s - 12), 6 + r() * (s - 12), 1 + r() * 2.5, 0, 6.3); g.fill(); }
+  var t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
 function shade(hex, f) { col2.setHex(hex).multiplyScalar(f); return col2.getHex(); }
 function lam(c, o) { var m = new THREE.MeshLambertMaterial(Object.assign({ color: c }, o || {})); W.owned.push(m); return m; }
 function bas(c, o) { var m = new THREE.MeshBasicMaterial(Object.assign({ color: c }, o || {})); W.owned.push(m); return m; }
@@ -168,6 +205,10 @@ W.build = function (L) {
   for (i = 0; i < dp.count; i++) { var ty = Math.max(0, Math.min(1, dp.getY(i) / 200));
     col.setHex(pal.fog).lerp(col2.setHex(pal.skyTop), Math.pow(ty, 0.6)); dc.setXYZ(i, col.r, col.g, col.b); }
   dc.needsUpdate = true;
+  // procedural sky panorama (stands in for a painted skybox) and a tileable ground detail texture
+  var mood = L.torches ? 'night' : (L.river ? 'dusk' : 'day');
+  if (W.skyTex) W.skyTex.dispose(); W.skyTex = makeSky(pal, mood, sunOff); domeMat.map = W.skyTex; domeMat.vertexColors = false; domeMat.needsUpdate = true;
+  if (W.groundTex) W.groundTex.dispose(); W.groundTex = makeGroundTex(mood, L.seed);
 
   // reserved circles keep scenery off spawns / props
   var res = [];
@@ -187,71 +228,98 @@ W.build = function (L) {
     if (gz <= A0 + 1 && gz >= A1 - 1 && Math.abs(gx) < 27.5) col.setHex(pal.arena);
     if (gz < A1 - 1 && Math.abs(gx) < 9.5) col.lerp(col2.setHex(pal.path), 0.85);
     if (L.river && gz < L.river.z0 + 1 && gz > L.river.z1 - 1) col.multiplyScalar(0.55);
-    col.multiplyScalar(0.9 + rng() * 0.2); gc[i * 3] = col.r; gc[i * 3 + 1] = col.g; gc[i * 3 + 2] = col.b;
+    col.multiplyScalar((0.9 + rng() * 0.2) * 1.14); gc[i * 3] = col.r; gc[i * 3 + 1] = col.g; gc[i * 3 + 2] = col.b;
   }
   gg.setAttribute('color', new THREE.BufferAttribute(gc, 3));
-  var gm = new THREE.MeshLambertMaterial({ vertexColors: true }); W.owned.push(gg, gm);
+  W.groundTex.repeat.set(150 / 7, totalLen / 7);
+  var gm = new THREE.MeshLambertMaterial({ vertexColors: true, map: W.groundTex }); W.owned.push(gg, gm);
   var ground = new THREE.Mesh(gg, gm); ground.position.z = cz; ground.receiveShadow = true; g.add(ground);
 
-  /* ----- scenery helpers ----- */
+  /* ----- scenery helpers -----
+     Layout decisions (anything that changes colliders) use `rng`; purely visual variation uses `vr`,
+     so a level is laid out identically whether a prop is drawn as a GLB or as its primitive fallback. */
+  var vr = mulberry(L.seed * 31 + 7), AS = JO.Assets, GL = function (n) { return AS && AS.parts && AS.parts(n); };
   function tree(x, z, big) {
-    var h = (big ? 7 : 5.2) + rng() * 3, tr = 0.55 + rng() * 0.35;
-    b.add('trunk', x, h / 2, z, tr * 1.3, h, tr * 1.3, shade(pal.trunk, 0.85 + rng() * 0.3), rng() * 6);
-    var leaf = pal.leaf[(rng() * pal.leaf.length) | 0], cr = (big ? 6 : 4.2) + rng() * 2.2;
-    if (rng() < 0.62) {
-      b.add('ico', x, h + cr * 0.22, z, cr, cr * 0.72, cr, leaf, rng() * 6);
-      b.add('ico', x + (rng() - 0.5) * 2.4, h + cr * 0.6, z + (rng() - 0.5) * 2.4, cr * 0.66, cr * 0.55, cr * 0.66, shade(leaf, 1.12), rng() * 6);
-    } else {
-      b.add('cone', x, h + cr * 0.3, z, cr, cr * 0.95, cr, leaf, rng() * 6);
-      b.add('cone', x, h + cr * 0.85, z, cr * 0.7, cr * 0.8, cr * 0.7, shade(leaf, 1.1), rng() * 6);
+    var h = (big ? 7 : 5.2) + vr() * 3, leaf = pal.leaf[(vr() * pal.leaf.length) | 0], k = vr(), tr = 0.55 + vr() * 0.35, cr = (big ? 6 : 4.2) + vr() * 2.2;
+    var name = k < 0.5 ? 'env_tree_a' : (k < 0.86 ? 'env_tree_b' : 'env_tree_c');
+    if (GL(name)) {
+      var s = h / 6.3 * (name === 'env_tree_c' ? 1.15 : 1), wd = s * (big ? 1.2 : 1);
+      b.addModel(name, x, 0, z, wd, s, wd, leaf, vr() * 6, 0.85 + vr() * 0.3);
+      if (name !== 'env_tree_c' && vr() < 0.55 && GL('env_vine')) b.addModel('env_vine', x + (vr() - 0.5) * 2.6 * s, 5.5 * s, z + (vr() - 0.5) * 2.6 * s, 1.2, 0.8 + vr() * 0.7, 1.2, shade(leaf, 0.7), vr() * 6, 1);
+      return;
     }
-    var nv = (rng() * 3) | 0;                                   // hanging vines
-    for (var v = 0; v < nv; v++) { var vl = 1.4 + rng() * 2.2, va = rng() * 6.28, vr = cr * 0.3 * rng() + 0.6;
-      b.add('box', x + Math.cos(va) * vr, h - vl / 2 + 0.3, z + Math.sin(va) * vr, 0.07, vl, 0.07, shade(leaf, 0.7)); }
+    b.add('trunk', x, h / 2, z, tr * 1.3, h, tr * 1.3, shade(pal.trunk, 0.85 + vr() * 0.3), vr() * 6);
+    if (k < 0.62) {
+      b.add('ico', x, h + cr * 0.22, z, cr, cr * 0.72, cr, leaf, vr() * 6);
+      b.add('ico', x + (vr() - 0.5) * 2.4, h + cr * 0.6, z + (vr() - 0.5) * 2.4, cr * 0.66, cr * 0.55, cr * 0.66, shade(leaf, 1.12), vr() * 6);
+    } else {
+      b.add('cone', x, h + cr * 0.3, z, cr, cr * 0.95, cr, leaf, vr() * 6);
+      b.add('cone', x, h + cr * 0.85, z, cr * 0.7, cr * 0.8, cr * 0.7, shade(leaf, 1.1), vr() * 6);
+    }
+    var nv = (vr() * 3) | 0;                                   // hanging vines
+    for (var v = 0; v < nv; v++) { var vl = 1.4 + vr() * 2.2, va = vr() * 6.28, vd = cr * 0.3 * vr() + 0.6;
+      b.add('box', x + Math.cos(va) * vd, h - vl / 2 + 0.3, z + Math.sin(va) * vd, 0.07, vl, 0.07, shade(leaf, 0.7)); }
   }
-  function bush(x, z, s) { b.add('ico0', x, s * 0.32, z, s * 1.5, s * 0.8, s * 1.5, shade(pal.leaf[(rng() * pal.leaf.length) | 0], 0.9 + rng() * 0.25), rng() * 6); }
-  function rock(x, z, s) { b.add('rock', x, s * 0.42, z, s * 1.7, s * 1.15, s * 1.7, shade(STONE, 0.85 + rng() * 0.3), rng() * 6, rng() * 0.4);
-    W.addBox(x, z, s * 0.62, s * 0.62, s * 0.9, { cover: s > 1.15 }); }
+  function bush(x, z, s) {
+    var leaf = shade(pal.leaf[(vr() * pal.leaf.length) | 0], 0.9 + vr() * 0.25);
+    if (GL('env_bush')) b.addModel('env_bush', x, 0, z, s * 0.8, s * 0.86, s * 0.8, leaf, vr() * 6, 1);
+    else b.add('ico0', x, s * 0.32, z, s * 1.5, s * 0.8, s * 1.5, leaf, vr() * 6);
+  }
+  function rock(x, z, s) {
+    if (GL('env_rock')) b.addModel('env_rock', x, 0, z, s * 0.94, s * 1.05, s * 0.94, 0, vr() * 6, 0.8 + vr() * 0.3);
+    else b.add('rock', x, s * 0.42, z, s * 1.7, s * 1.15, s * 1.7, shade(STONE, 0.85 + vr() * 0.3), vr() * 6, vr() * 0.4);
+    W.addBox(x, z, s * 0.62, s * 0.62, s * 0.9, { cover: s > 1.15 });
+  }
   function sandbag(x, z, rot) {
-    var lx = rot ? 0 : 1, lz = rot ? 1 : 0;
-    for (var row = 0; row < 3; row++) for (var k = -1; k <= 1; k++) { var off = k * 0.98 + (row % 2 ? 0.45 : 0);
-      if (row === 2 && k === 1) continue;
-      b.add('box', x + lx * off, 0.21 + row * 0.42, z + lz * off, rot ? 0.72 : 0.94, 0.4, rot ? 0.94 : 0.72, shade(SAND, 0.85 + rng() * 0.25), (rng() - 0.5) * 0.1); }
+    if (GL('env_sandbag')) b.addModel('env_sandbag', x, 0, z, 1, 1.02, 1, 0, rot ? Math.PI / 2 : 0, 0.9 + vr() * 0.2);
+    else { var lx = rot ? 0 : 1, lz = rot ? 1 : 0;
+      for (var row = 0; row < 3; row++) for (var k = -1; k <= 1; k++) { var off = k * 0.98 + (row % 2 ? 0.45 : 0);
+        if (row === 2 && k === 1) continue;
+        b.add('box', x + lx * off, 0.21 + row * 0.42, z + lz * off, rot ? 0.72 : 0.94, 0.4, rot ? 0.94 : 0.72, shade(SAND, 0.85 + vr() * 0.25), (vr() - 0.5) * 0.1); } }
     W.addBox(x, z, rot ? 0.42 : 1.55, rot ? 1.55 : 0.42, 1.27, { cover: true });
   }
   function crateStack(x, z, tall) {
-    var s = 1.3; b.add('box', x, s / 2, z, s, s, s, shade(WOOD, 0.9 + rng() * 0.2), rng() * 0.2);
-    b.add('box', x, s / 2, z, s + 0.06, 0.12, s + 0.06, WOODD);
-    var top = s;
-    if (tall || rng() < 0.4) { b.add('box', x, s * 1.5, z, s * 0.95, s, s * 0.95, shade(WOOD, 1.05), 0.3); top = s * 2; }
-    W.addBox(x, z, s / 2, s / 2, top, { cover: true });
-    if (!tall && rng() < 0.6) { var x2 = x + (rng() < 0.5 ? -1.36 : 1.36); b.add('box', x2, 0.55, z + 0.1, 1.1, 1.1, 1.1, shade(WOOD, 0.8), 0.1); W.addBox(x2, z + 0.1, 0.55, 0.55, 1.1); }
+    var s = 1.3, glb = GL('env_crate'), two = tall || rng() < 0.4, side = !tall && rng() < 0.6, x2 = x + (rng() < 0.5 ? -1.36 : 1.36);
+    function one(cx, cy, cz, sc, ry, f) { if (glb) b.addModel('env_crate', cx, cy, cz, sc, sc, sc, 0, ry, f);
+      else { b.add('box', cx, cy + s * sc / 2, cz, s * sc, s * sc, s * sc, shade(WOOD, f), ry); b.add('box', cx, cy + s * sc / 2, cz, s * sc + 0.06, 0.12, s * sc + 0.06, WOODD, ry); } }
+    one(x, 0, z, 1, vr() * 0.2, 0.9 + vr() * 0.2);
+    if (two) one(x, s, z, 0.95, 0.3, 1.05);
+    W.addBox(x, z, s / 2, s / 2, two ? s * 2 : s, { cover: true });
+    if (side) { one(x2, 0, z + 0.1, 0.85, 0.1, 0.8); W.addBox(x2, z + 0.1, 0.55, 0.55, 1.1); }
   }
   function ruin(x, z, rot) {
-    var segs = 2 + ((rng() * 2) | 0);
+    var segs = 2 + ((rng() * 2) | 0), glb = GL('env_wall');
     for (var k = 0; k < segs; k++) { var h = 1.5 + rng() * 2.2, o = (k - (segs - 1) / 2) * 1.7, px = x + (rot ? 0 : o), pz = z + (rot ? o : 0);
-      b.add('box', px, h / 2, pz, rot ? 0.8 : 1.7, h, rot ? 1.7 : 0.8, shade(STONE, 0.8 + rng() * 0.3));
-      if (rng() < 0.5) b.add('box', px, h + 0.2, pz, 0.7, 0.4, 0.7, shade(STONE, 0.7), rng());
+      if (glb) b.addModel('env_wall', px, 0, pz, 1, h / 2.5, 1, 0, rot ? Math.PI / 2 : 0, 0.8 + vr() * 0.3);
+      else { b.add('box', px, h / 2, pz, rot ? 0.8 : 1.7, h, rot ? 1.7 : 0.8, shade(STONE, 0.8 + vr() * 0.3)); if (vr() < 0.5) b.add('box', px, h + 0.2, pz, 0.7, 0.4, 0.7, shade(STONE, 0.7), vr()); }
       W.addBox(px, pz, rot ? 0.4 : 0.85, rot ? 0.85 : 0.4, h); }
     W.cover.push({ x: x, z: z, r: 1.2 });
   }
   function pillar(x, z, h, wd) {
-    wd = wd || 2.2; b.add('box', x, h / 2, z, wd, h, wd, shade(STONE, 0.85 + rng() * 0.2));
-    b.add('box', x, 0.25, z, wd + 0.5, 0.5, wd + 0.5, shade(STONE, 0.7));
-    b.add('box', x, h + 0.2, z, wd + 0.4, 0.4, wd + 0.4, shade(STONE, 0.95), rng() * 0.3);
+    wd = wd || 2.2;
+    if (GL('env_pillar')) b.addModel('env_pillar', x, 0, z, wd / 2.2, h / 6.2, wd / 2.2, 0, ((vr() * 4) | 0) * Math.PI / 2, 0.85 + vr() * 0.2);
+    else { b.add('box', x, h / 2, z, wd, h, wd, shade(STONE, 0.85 + vr() * 0.2)); b.add('box', x, 0.25, z, wd + 0.5, 0.5, wd + 0.5, shade(STONE, 0.7)); b.add('box', x, h + 0.2, z, wd + 0.4, 0.4, wd + 0.4, shade(STONE, 0.95), vr() * 0.3); }
     W.addBox(x, z, wd / 2, wd / 2, h, { cover: true }); W.arena.pillars.push({ x: x, z: z });
   }
   function tower(x, z) {
-    for (var sx = -1; sx <= 1; sx += 2) for (var sz = -1; sz <= 1; sz += 2) {
-      b.add('box', x + sx * 1.35, 2.4, z + sz * 1.35, 0.26, 4.8, 0.26, WOODD);
-      b.add('box', x + sx * 1.45, 5.9, z + sz * 1.45, 0.14, 2.1, 0.14, WOODD); }
-    b.add('box', x, 4.76, z, 3.4, 0.24, 3.4, WOOD);
-    b.add('box', x, 5.35, z - 1.6, 3.3, 0.12, 0.1, WOODD); b.add('box', x, 5.35, z + 1.6, 3.3, 0.12, 0.1, WOODD);
-    b.add('box', x - 1.6, 5.35, z, 0.1, 0.12, 3.3, WOODD); b.add('box', x + 1.6, 5.35, z, 0.1, 0.12, 3.3, WOODD);
-    b.add('cone', x, 7.6, z, 5.6, 1.5, 5.6, 0x8a7a3c, Math.PI / 4);
-    for (var r = 0; r < 7; r++) b.add('box', x + 1.75, 0.5 + r * 0.65, z, 0.08, 0.08, 0.7, WOOD);
+    if (GL('env_tower')) b.addModel('env_tower', x, 0, z, 1, 1, 1, 0, 0, 1);
+    else {
+      for (var sx = -1; sx <= 1; sx += 2) for (var sz = -1; sz <= 1; sz += 2) {
+        b.add('box', x + sx * 1.35, 2.4, z + sz * 1.35, 0.26, 4.8, 0.26, WOODD);
+        b.add('box', x + sx * 1.45, 5.9, z + sz * 1.45, 0.14, 2.1, 0.14, WOODD); }
+      b.add('box', x, 4.76, z, 3.4, 0.24, 3.4, WOOD);
+      b.add('box', x, 5.35, z - 1.6, 3.3, 0.12, 0.1, WOODD); b.add('box', x, 5.35, z + 1.6, 3.3, 0.12, 0.1, WOODD);
+      b.add('box', x - 1.6, 5.35, z, 0.1, 0.12, 3.3, WOODD); b.add('box', x + 1.6, 5.35, z, 0.1, 0.12, 3.3, WOODD);
+      b.add('cone', x, 7.6, z, 5.6, 1.5, 5.6, 0x8a7a3c, Math.PI / 4);
+      for (var r = 0; r < 7; r++) b.add('box', x + 1.75, 0.5 + r * 0.65, z, 0.08, 0.08, 0.7, WOOD);
+    }
     W.addBox(x, z, 1.7, 1.7, 4.88, { y0: 4.6 });
     W.towers.push({ x: x, z: z, y: 4.88 }); reserve(x, z, 3);
+  }
+  // one-off set dressing; returns false when the model is missing (callers may skip the collider too)
+  function decor(name, x, z, ry, hx, hz, h, sc) {
+    if (!GL(name)) return false;
+    b.addModel(name, x, 0, z, sc || 1, sc || 1, sc || 1, 0, ry || 0, 1); if (hx) W.addBox(x, z, hx, hz, h, { cover: true }); reserve(x, z, Math.max(hx || 1, hz || 1) + 1); return true;
   }
   function torch(x, z) {
     b.add('cyl', x, 1.15, z, 0.14, 2.3, 0.14, WOODD); b.add('cone', x, 2.3, z, 0.5, 0.4, 0.5, 0x333333, 0, Math.PI);
@@ -306,6 +374,14 @@ W.build = function (L) {
     }
   });
 
+  /* ----- set dressing (GLB only; skipped silently when a model is missing) ----- */
+  if (L.boss === 'brute') decor('env_jeep', -9, 4.5, 0.5, 1.3, 2.2, 1.7);
+  if (L.river) decor('env_boat', -10.5, L.river.z0 + 3.4, 1.2);
+  if (L.boss === 'commander') {
+    decor('env_jeep', 9, 4.5, -0.4, 1.3, 2.2, 1.7); decor('env_building', -12.6, A0 + 14, Math.PI / 2, 2.8, 3.3, 3.3); decor('env_building', 12.6, A0 + 15.5, -Math.PI / 2, 2.8, 3.3, 3.3);
+    [[-23, AC - 26, 0.8], [23, AC - 26, -0.8], [-23, AC + 26, 2.4], [23, AC + 26, -2.4]].forEach(function (p) { decor('env_searchlight', p[0], p[1], p[2], 0, 0, 0, 1.3); });
+  }
+
   /* ----- river + bridge ----- */
   function addWater(x0, x1, z0, z1, bridge) {
     var wg = new THREE.PlaneGeometry(x1 - x0, z0 - z1, 26, 6); wg.rotateX(-Math.PI / 2);
@@ -323,10 +399,12 @@ W.build = function (L) {
   }
   if (L.river) {
     var R = L.river; addWater(-40, 40, R.z0, R.z1, true);
-    for (var bz = R.z0 + 1; bz > R.z1 - 1.01; bz -= 0.8) b.add('box', 0, 0.2, bz, 5, 0.12, 0.7, shade(WOOD, 0.85 + rng() * 0.25), (rng() - 0.5) * 0.04);
-    for (var pz = R.z0 + 1; pz > R.z1 - 1.01; pz -= 3.2) { b.add('box', -2.45, 0.7, pz, 0.16, 1.4, 0.16, WOODD); b.add('box', 2.45, 0.7, pz, 0.16, 1.4, 0.16, WOODD); }
     var bl = R.z0 - R.z1 + 2, bm2 = (R.z0 + R.z1) / 2;
+    if (!b.addModel('env_bridge', 0, 0, bm2, 1, 1, bl / 16, 0, 0, 1)) {
+    for (var bz = R.z0 + 1; bz > R.z1 - 1.01; bz -= 0.8) b.add('box', 0, 0.2, bz, 5, 0.12, 0.7, shade(WOOD, 0.85 + vr() * 0.25), (vr() - 0.5) * 0.04);
+    for (var pz = R.z0 + 1; pz > R.z1 - 1.01; pz -= 3.2) { b.add('box', -2.45, 0.7, pz, 0.16, 1.4, 0.16, WOODD); b.add('box', 2.45, 0.7, pz, 0.16, 1.4, 0.16, WOODD); }
     b.add('box', -2.45, 1.3, bm2, 0.1, 0.1, bl, WOOD); b.add('box', 2.45, 1.3, bm2, 0.1, 0.1, bl, WOOD);
+    }
     for (i = 0; i < 10; i++) { var rx = (rng() < 0.5 ? -1 : 1) * (4 + rng() * 12); b.add('rock', rx, 0.2, R.z1 + rng() * (R.z0 - R.z1), 1.2, 0.7, 1.2, shade(STONE, 0.8), rng() * 6); }
   }
 
