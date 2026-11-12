@@ -11,7 +11,7 @@ var UI = JO.UI = {};
 var $ = function (id) { return document.getElementById(id); };
 var el = {}, cache = {}, dn = [], inds = [], dnNext = 0, v = new THREE.Vector3();
 var hitT = 0, vigT = 0, bannerT = 0, crossGap = 6;
-var SCREENS = ['scrTitle', 'scrControls', 'scrIntro', 'scrPause', 'scrDead', 'scrDone', 'scrWin'];
+var SCREENS = [];
 
 function set(id, val) { if (cache[id] !== val) { cache[id] = val; el[id].textContent = val; } }
 function scale(id, k) { k = Math.max(0, Math.min(1, k)); var key = id + 's', r = Math.round(k * 200); if (cache[key] !== r) { cache[key] = r; el[id].style.transform = 'scaleX(' + (r / 200) + ')'; } }
@@ -20,7 +20,8 @@ function cls(node, name, on) { var key = node.id + '.' + name; if (cache[key] !=
 UI.init = function () {
   ['hud', 'hudLevel', 'hudObj', 'hudKills', 'hpFill', 'hpTxt', 'arFill', 'arTxt', 'stFill', 'wName', 'wAmmo', 's1', 's2', 's3', 'bossWrap', 'bossName', 'bossFill', 'bossPhase', 'bossBar',
     'banner', 'prompt', 'reloadTxt', 'cross', 'hitm', 'vignette', 'lowhp', 'inds', 'dnums', 'touch', 'btnPause', 'btnMute', 'tUse'].forEach(function (id) { el[id] = $(id); });
-  var i, d;
+  var i, d, scr = document.querySelectorAll('.screen[id^=scr]'); for (i = 0; i < scr.length; i++) SCREENS.push(scr[i].id);
+  el.toasts = $('toasts');
   for (i = 0; i < 22; i++) { d = document.createElement('div'); d.className = 'dnum'; el.dnums.appendChild(d); dn.push({ el: d, life: 0, x: 0, y: 0, z: 0, max: 1 }); }
   for (i = 0; i < 5; i++) { d = document.createElement('i'); el.inds.appendChild(d); inds.push({ el: d, life: 0, sx: 0, sz: 0 }); }
   el.cl = el.cross.querySelector('.l'); el.cr = el.cross.querySelector('.r'); el.cu = el.cross.querySelector('.u'); el.cd = el.cross.querySelector('.d');
@@ -29,6 +30,12 @@ UI.init = function () {
 UI.show = function (id) {
   SCREENS.forEach(function (s) { $(s).classList.toggle('hidden', s !== id); });
   var first = id && $(id).querySelector('.btn, .card'); if (first && !JO.Input.isTouch) try { first.focus({ preventScroll: true }); } catch (e) { /* older browsers */ }
+};
+// corner notification (collectibles, codex, achievements)
+UI.toast = function (kicker, text, color) {
+  var t = document.createElement('div'); t.className = 'toast'; t.style.borderColor = color || '#ffb62e'; t.innerHTML = '<b style="color:' + (color || '#ffb62e') + '"></b><span></span>';
+  t.firstChild.textContent = kicker; t.lastChild.textContent = text; el.toasts.appendChild(t); while (el.toasts.children.length > 4) el.toasts.removeChild(el.toasts.firstChild);
+  setTimeout(function () { t.classList.add('out'); }, 4200); setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 4800);
 };
 UI.hud = function (on) { el.hud.classList.toggle('hidden', !on); UI.refreshTouch(); };
 UI.refreshTouch = function () {
@@ -76,7 +83,7 @@ UI.update = function (dt, camera) {
   var obj = Gm.objective; if (cache.obj !== obj) { cache.obj = obj; el.hudObj.innerHTML = obj; }
   if (Gm.boss && Gm.bossFight) { scale('bossFill', Gm.boss.hp / Gm.boss.maxHp);
     set('bossPhase', Gm.boss.kind === 'commander' && Gm.boss.shieldUp() ? 'SHIELD ACTIVE — WAIT FOR THE MISSILE VOLLEY' : (Gm.boss.phase >= Gm.boss.phases && Gm.boss.phases === 3 && Gm.boss.kind === 'phantom' ? 'FINAL STAGE' : 'PHASE ' + Gm.boss.phase)); }
-  var pr = P.nearCrate ? (I.isTouch ? 'TAP <kbd>USE</kbd> TO OPEN SUPPLY CRATE' : 'PRESS <kbd>E</kbd> TO OPEN SUPPLY CRATE') : '';
+  var pr = Gm.hint || (P.nearCrate ? (I.isTouch ? 'TAP <kbd>USE</kbd> TO OPEN SUPPLY CRATE' : 'PRESS <kbd>E</kbd> TO OPEN SUPPLY CRATE') : '');
   if (cache.prompt !== pr) { cache.prompt = pr; el.prompt.innerHTML = pr; el.prompt.classList.toggle('hidden', !pr); el.tUse.classList.toggle('hidden', !pr); }
 
   // crosshair spread
@@ -114,11 +121,16 @@ UI.showIntro = function (L, unlock) {
 };
 UI.showDone = function (L, st, choices, onPick) {
   $('doneSub').textContent = L.sub + ' — ' + L.name; statBlock($('doneStats'), st);
+  var cc = JO.Codex.levelCount(JO.Game.levelIdx); $('doneFound').textContent = 'INTEL ' + cc.intel + ' / 4   ·   IDOL ' + cc.idol + ' / 1';
   var wrap = $('upCards'); wrap.innerHTML = '';
   choices.forEach(function (u) { var b = document.createElement('button'); b.className = 'card'; b.innerHTML = '<b>' + u.name + '</b><small>' + u.desc + '</small>';
     b.addEventListener('click', function () { onPick(u.id); }); wrap.appendChild(b); });
   UI.show('scrDone');
 };
-UI.showWin = function (total) { statBlock($('winStats'), total); UI.show('scrWin'); };
+UI.showWin = function (total, ending, run) {
+  var D = window.JO_STORY || {}, e = ending && D.endings && D.endings[ending], n = Object.keys(JO.Save.profile.endings).length;
+  $('winSub').textContent = e ? 'ENDING ' + n + ' OF 3 FOUND' : 'THE OUTPOST HAS FALLEN'; $('winTitle').textContent = e ? e.title : 'MISSION ACCOMPLISHED';
+  $('winStory').textContent = e ? e.hint + (run ? '  Mercy: ' + run.mercy + '.' : '') : "The Commander's walker burns in the courtyard. Extraction is inbound.";
+  statBlock($('winStats'), total); UI.show('scrWin'); };
 UI.showDead = function (msg) { $('deadMsg').textContent = msg; UI.show('scrDead'); };
 })();

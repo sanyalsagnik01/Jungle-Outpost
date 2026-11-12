@@ -92,7 +92,7 @@ canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block}
 #dbg{position:fixed;left:14px;top:110px;z-index:35;margin:0;padding:10px 12px;background:rgba(0,0,0,.72);border-left:3px solid var(--cyan);color:#cfeee8;font:11px/1.45 var(--mono);pointer-events:none;white-space:pre;max-width:46vw;overflow:hidden}
 
 /* ---------- story: dialogue, barks, boss card, cutscenes ---------- */
-#dlg{position:fixed;left:50%;bottom:132px;transform:translateX(-50%);width:min(640px,92vw);display:flex;gap:12px;align-items:flex-start;z-index:25;pointer-events:auto;cursor:pointer;
+#dlg{position:fixed;left:50%;bottom:132px;transform:translateX(-50%);width:min(640px,92vw);display:flex;gap:12px;align-items:flex-start;z-index:45;pointer-events:auto;cursor:pointer;
   padding:10px 14px;background:linear-gradient(180deg,rgba(8,14,8,.88),rgba(8,14,8,.72));border-left:3px solid var(--amber);clip-path:polygon(0 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%)}
 #dlgPic{flex:0 0 60px;height:60px;background-size:cover;border:2px solid var(--amber);image-rendering:pixelated}
 #dlgName{font-family:var(--head);letter-spacing:3px;font-size:15px}
@@ -100,6 +100,7 @@ canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block}
 #dlg small{position:absolute;right:16px;top:8px;font-family:var(--mono);font-size:9px;letter-spacing:2px;opacity:.5}
 #bark{position:fixed;left:0;right:0;bottom:104px;text-align:center;font-family:var(--mono);font-size:calc(12px * var(--sub,1));letter-spacing:1px;color:#cfcab0;text-shadow:0 1px 0 #000;opacity:0;transition:opacity .2s;z-index:24;pointer-events:none}
 body.cine #hud{opacity:0}
+body.paused #dlg,body.paused #bark{visibility:hidden}
 #card{position:fixed;left:0;right:0;bottom:34%;text-align:center;z-index:26;pointer-events:none}
 #card:before,#card:after{content:"";position:fixed;left:0;right:0;height:11vh;background:#000}#card:before{top:0}#card:after{bottom:0}
 #cardName{font-family:var(--head);font-size:clamp(40px,8vw,92px);letter-spacing:10px;color:var(--red);text-shadow:0 5px 0 #000,0 0 40px rgba(255,60,40,.6);transform:translateX(-40px);opacity:0;transition:transform .5s cubic-bezier(.2,.9,.3,1),opacity .4s}
@@ -117,6 +118,23 @@ body.cine #hud{opacity:0}
 #cutBar{display:flex;gap:10px;align-items:center;margin-top:10px;font-family:var(--mono);font-size:11px;letter-spacing:3px}
 #cutBar .btn{min-width:0;font-size:15px;padding:8px 22px}
 @media (prefers-reduced-motion:reduce){#cutArt{animation:none !important}}
+
+#toasts{position:fixed;right:14px;top:64px;z-index:50;display:flex;flex-direction:column;gap:6px;pointer-events:none;align-items:flex-end}
+.toast{min-width:230px;max-width:340px;padding:8px 12px;background:rgba(8,14,8,.9);border-right:3px solid var(--amber);font-family:var(--mono);font-size:12px;text-align:right;animation:toastIn .25s ease-out;transition:opacity .5s,transform .5s}
+.toast b{display:block;font-family:var(--head);font-weight:normal;letter-spacing:3px;font-size:14px}.toast.out{opacity:0;transform:translateX(30px)}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0 12px}
+.tabs button{pointer-events:auto;font-family:var(--mono);font-size:12px;letter-spacing:3px;padding:7px 16px;background:transparent;color:var(--bone);border:1px solid rgba(233,228,207,.4);cursor:pointer}
+.tabs button.on{background:var(--amber);color:var(--ink);border-color:var(--amber)}
+.split{display:grid;grid-template-columns:minmax(200px,280px) minmax(260px,520px);gap:14px;text-align:left;max-height:54vh;width:min(840px,94vw)}
+#cxList{overflow:auto;display:flex;flex-direction:column;gap:4px;padding-right:4px}
+.cxi{pointer-events:auto;text-align:left;padding:8px 10px;background:rgba(20,34,20,.85);border:1px solid rgba(255,182,46,.25);color:var(--bone);font-family:var(--body);font-size:14px;cursor:pointer}
+.cxi.on{border-color:var(--amber);background:rgba(40,60,34,.95)}.cxi.lock{opacity:.45;font-family:var(--mono);letter-spacing:4px}
+#cxBody{background:rgba(0,0,0,.4);border-top:2px solid var(--amber);padding:14px 16px;overflow:auto;font-size:16px;line-height:1.55}
+#cxBody b{display:block;font-family:var(--head);font-weight:normal;letter-spacing:2px;font-size:24px;color:var(--amber);margin-bottom:8px}#cxBody p{margin:0}.dim{opacity:.6}
+.card.locked{opacity:.5;cursor:not-allowed;border-style:dashed}
+.found{font-family:var(--mono);letter-spacing:3px;font-size:12px;color:var(--cyan);margin:-8px 0 18px}
+@media (max-width:700px){.split{grid-template-columns:1fr;max-height:none}#cxList{max-height:26vh}}
 
 /* ---------- touch ---------- */
 #touch{position:fixed;inset:0;pointer-events:none;z-index:20}
@@ -226,6 +244,7 @@ body.touch #prompt{top:40%}
   <div id="cutBar"><span id="cutN"></span><button class="btn" id="cutNext">NEXT</button><button class="btn ghost" id="cutSkip">SKIP</button></div>
 </div>
 
+<div id="toasts"></div>
 <pre id="dbg" class="hidden"></pre>
 
 <div id="topR">
@@ -238,6 +257,7 @@ body.touch #prompt{top:40%}
   <div class="tag">ONE ENGINEER &middot; ONE MISSING SISTER &middot; ONE VALLEY THAT HUMS</div>
   <div id="loadWrap"><div id="loadBar"><i id="loadFill"></i></div><div id="loadTxt">LOADING MODELS</div></div>
   <button class="btn" id="btnStart">START MISSION</button>
+  <button class="btn ghost" id="btnCodex">CODEX</button>
   <button class="btn ghost" id="btnControls">CONTROLS</button>
   <div class="row diff" id="diffRow">
     <button data-d="easy">EASY</button><button data-d="normal" class="on">NORMAL</button><button data-d="hard">HARD</button>
@@ -269,6 +289,7 @@ body.touch #prompt{top:40%}
 <div id="scrPause" class="screen hidden">
   <h2>PAUSED</h2>
   <button class="btn" id="btnResume">RESUME</button>
+  <button class="btn ghost" id="btnPauseCodex">CODEX</button>
   <button class="btn ghost" id="btnPauseRestart">RESTART LEVEL</button>
   <button class="btn ghost" id="btnPauseQuit">QUIT TO TITLE</button>
   <div class="note">WASD move &middot; Shift sprint &middot; Space jump &middot; C roll &middot; LMB shoot &middot; RMB aim &middot; R reload &middot; 1/2/3 weapons &middot; E interact &middot; M mute</div>
@@ -284,15 +305,30 @@ body.touch #prompt{top:40%}
 <div id="scrDone" class="screen hidden">
   <h3 id="doneSub"></h3><h2>LEVEL COMPLETE</h2>
   <div class="stats" id="doneStats"></div>
+  <div class="found" id="doneFound"></div>
   <h3>CHOOSE ONE FIELD UPGRADE</h3>
   <div class="cards" id="upCards"></div>
 </div>
 
 <div id="scrWin" class="screen hidden">
-  <h3>THE OUTPOST HAS FALLEN</h3><h2>MISSION ACCOMPLISHED</h2>
-  <div class="story" style="margin:6px 0">The Commander's walker burns in the courtyard. Extraction is inbound.</div>
+  <h3 id="winSub">THE OUTPOST HAS FALLEN</h3><h2 id="winTitle">MISSION ACCOMPLISHED</h2>
+  <div class="story" style="margin:6px 0" id="winStory"></div>
   <div class="stats" id="winStats"></div>
   <button class="btn" id="btnAgain">PLAY AGAIN</button>
+</div>
+
+<div id="scrCodex" class="screen hidden">
+  <h2>CODEX</h2>
+  <div class="tabs" id="cxTabs"><button data-tab="intel">INTEL</button><button data-tab="bios">PEOPLE</button><button data-tab="enemies">ENEMIES</button><button data-tab="bosses">BOSSES</button></div>
+  <div class="split"><div id="cxList"></div><div id="cxBody"></div></div>
+  <div class="note" id="cxCount" style="margin:10px 0"></div>
+  <button class="btn" id="btnCodexBack">BACK</button>
+</div>
+
+<div id="scrChoice" class="screen clear hidden">
+  <h3>MIRA WAITS. THE BLOOM HUMS.</h3><h2>YOUR CHOICE</h2>
+  <div class="cards" id="choiceCards"></div>
+  <div class="note">This decides the ending.</div>
 </div>
 
 <script src="lib/three.min.js"></script>
@@ -302,6 +338,7 @@ body.touch #prompt{top:40%}
 <script src="models/models.bundle.js"></script>
 <script src="js/config.js"></script>
 <script src="js/events.js"></script>
+<script src="js/save.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/story.data.js"></script>
 <script src="js/input.js"></script>
@@ -315,6 +352,8 @@ body.touch #prompt{top:40%}
 <script src="js/bosses.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/story.js"></script>
+<script src="js/codex.js"></script>
+<script src="js/finale.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

@@ -9,7 +9,7 @@
 var JO = window.JO;
 var I = JO.Input = {
   moveX: 0, moveY: 0, fire: false, ads: false, sprint: false,
-  jumpPressed: false, rollPressed: false, reloadPressed: false, interactPressed: false, weapon: 0,
+  jumpPressed: false, rollPressed: false, reloadPressed: false, interactPressed: false, meleePressed: false, weapon: 0,
   locked: false, isTouch: false, keys: {}, joy: { x: 0, y: 0 }, external: false,
   onLook: null, onPause: null, onLockLost: null, onMute: null, onCanvasClick: null
 };
@@ -26,6 +26,8 @@ I.init = function (cv) {
     else if (c === 'KeyC' || c === 'ControlLeft' || c === 'ControlRight') I.rollPressed = true;
     else if (c === 'KeyR') I.reloadPressed = true;
     else if (c === 'KeyE') I.interactPressed = true;
+    else if (c === 'KeyF') I.meleePressed = true;
+    else if (c === 'KeyJ') { if (I.onCodex) I.onCodex(); }
     else if (c === 'Digit1' || c === 'Numpad1') I.weapon = 1;
     else if (c === 'Digit2' || c === 'Numpad2') I.weapon = 2;
     else if (c === 'Digit3' || c === 'Numpad3') I.weapon = 3;
@@ -70,7 +72,7 @@ I.poll = function () {
   I.sprint = !!(K.ShiftLeft || K.ShiftRight) || Math.hypot(I.joy.x, I.joy.y) > 0.93;
 };
 I.endStep = function () {
-  I.jumpPressed = I.rollPressed = I.reloadPressed = I.interactPressed = false; I.weapon = 0;
+  I.jumpPressed = I.rollPressed = I.reloadPressed = I.interactPressed = I.meleePressed = false; I.weapon = 0;
   if (fireEnd) { I.fire = false; fireEnd = false; }
 };
 I.clear = function () { fireEnd = false; I.fire = false; I.ads = false; I.joy.x = I.joy.y = 0; I.endStep(); for (var k in K) K[k] = false; };

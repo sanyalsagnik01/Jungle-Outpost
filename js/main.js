@@ -14,7 +14,8 @@ function newStats() { return { time: 0, kills: 0, shots: 0, hits: 0, dmgTaken: 0
 
 var Game = JO.Game = {
   state: 'title', levelIdx: 0, diff: 'normal', diffCfg: CFG.DIFF.normal, stats: newStats(), total: newStats(),
-  boss: null, bossFight: false, bossDying: false, bossDead: false, objective: '', timescale: 1,
+  boss: null, bossFight: false, bossDying: false, bossDead: false, objective: '', timescale: 1, hint: '', mode: '', ending: '',
+  run: { intel: {}, idols: {}, mercy: 0, spared: false, knockouts: 0 },
   debug: { god: false, bot: false, speed: 1, errors: [] }
 };
 var bossSeen = false, pending = [], pickups = [], snap = null, levelSnap = null, acc = 0, last = 0, spawnT = 0, deadT = 0, slowT = 0, supplyT = 0, titleT = 0, muted = false;
@@ -83,7 +84,7 @@ function setObjective() {
   Game.objective = Game.bossDead ? 'Objective: <b>Reach the flag</b>' : (Game.bossFight ? 'Objective: <b>Defeat ' + Game.boss.name + '</b>' : 'Objective: <b>Reach the flag</b> — push north');
 }
 Game.setDifficulty = function (d) { Game.diff = d; Game.diffCfg = CFG.DIFF[d]; };
-Game.startRun = function (idx) { P.resetRun(); Wp.resetRun(); Game.total = newStats(); Game.loadLevel(idx || 0); };
+Game.startRun = function (idx) { P.resetRun(); Wp.resetRun(); Game.total = newStats(); Game.ending = ''; Game.run = { intel: {}, idols: {}, mercy: 0, spared: false, knockouts: 0 }; Game.loadLevel(idx || 0); };
 Game.loadLevel = function (idx) {
   Game.levelIdx = idx; var L = CFG.LEVELS[idx];
   E.reset(); H.reset(); FX.reset(); clearPickups(); UI.clearFloat(); I.clear();
@@ -109,7 +110,7 @@ Game.pause = function () {
   else if (Game.state === 'paused') { St.pause(false); Game.beginPlay(); }
 };
 Game.toTitle = function () {
-  St.reset(); Game.state = 'title'; UI.hud(false); UI.show('scrTitle'); I.exitLock(); A.setIntensity(-1); A.setAmbient(false); A.setDrone(0); P.model.g.visible = false; UI.refreshTouch();
+  St.reset(); St.pause(false); Game.state = 'title'; UI.hud(false); UI.show('scrTitle'); I.exitLock(); A.setIntensity(-1); A.setAmbient(false); A.setDrone(0); P.model.g.visible = false; UI.refreshTouch();
 };
 Game.onPlayerDead = function () { Ev.emit('player_dead'); Game.state = 'dying'; deadT = 1.5; Game.timescale = 1; slowT = 0; };
 Game.retryCheckpoint = function () {
@@ -119,7 +120,7 @@ Game.retryCheckpoint = function () {
   if (!Game.bossDead) { Game.boss = B.create(CFG.LEVELS[Game.levelIdx].boss); W.resetBarriers(); }
   UI.bossBar(null); setObjective(); Game.beginPlay();
 };
-Game.restartLevel = function () { Game.noCut = true; Wp.restore(levelSnap.w); P.armor = levelSnap.armor; Game.loadLevel(Game.levelIdx); };
+Game.restartLevel = function () { St.pause(false); Game.noCut = true; Wp.restore(levelSnap.w); P.armor = levelSnap.armor; Game.loadLevel(Game.levelIdx); };
 
 function startBoss() {
   Game.bossFight = true; W.setBarrier('entry', false); A.play('gate'); Game.boss.start(); UI.bossBar(Game.boss); setObjective();
@@ -130,9 +131,10 @@ Game.onBossDying = function (b) {
   Game.timescale = b.kind === 'commander' ? 0.2 : 0.45; slowT = b.kind === 'commander' ? 2.0 : 0.7;     // slow-motion final hit
 };
 Game.onBossDead = function (b) {
-  Ev.emit('boss_dead', b); Game.bossDying = false; Game.bossDead = true; Game.bossFight = false; Game.stats.kills++; Game.timescale = 1; slowT = 0;
+  if (b.spared) { Game.run.spared = true; Game.run.mercy += 2; } else Game.stats.kills++;
+  Ev.emit('boss_dead', b); Game.bossDying = false; Game.bossDead = true; Game.bossFight = false; Game.timescale = 1; slowT = 0;
   W.setBarrier('entry', true); W.setBarrier('exit', true); W.flag.grp.visible = true; UI.bossBar(null); setObjective();
-  A.setIntensity(0); A.play('gate'); A.play('checkpoint'); UI.banner(b.name + ' DEFEATED — REACH THE FLAG', 3.5, false);
+  A.setIntensity(0); A.play('gate'); A.play('checkpoint'); UI.banner(b.spared ? b.name + ' STANDS DOWN — REACH THE FLAG' : b.name + ' DEFEATED — REACH THE FLAG', 3.5, false);
   Game.spawnPickup('health', b.pos.x + 1.5, b.pos.z); Game.spawnPickup('ammo', b.pos.x - 1.5, b.pos.z);
 };
 function completeLevel() {
@@ -140,7 +142,7 @@ function completeLevel() {
   I.exitLock(); I.clear(); UI.hud(false); A.play('win'); A.setIntensity(-1); A.setDrone(0);
   var L = CFG.LEVELS[Game.levelIdx];
   St.clear(); Ev.emit('level_complete', Game.levelIdx);
-  if (Game.levelIdx >= CFG.LEVELS.length - 1) { Game.state = 'win'; UI.showWin(t); UI.refreshTouch(); return; }
+  if (Game.levelIdx >= CFG.LEVELS.length - 1) { Game.state = 'win'; UI.showWin(t, Game.ending, Game.run); UI.refreshTouch(); return; }
   Game.state = 'done'; UI.refreshTouch();
   var pool = CFG.UPGRADES.slice(), choices = [];
   while (choices.length < 3) choices.push(pool.splice((Math.random() * pool.length) | 0, 1)[0]);
@@ -152,6 +154,7 @@ Game.completeLevel = completeLevel;
 function step(dt) {
   if (Game.state === 'dying') { deadT -= dt; if (deadT <= 0) { Game.state = 'dead'; I.exitLock(); A.setIntensity(-1); UI.hud(false); UI.refreshTouch();
     UI.showDead(Game.bossFight ? Game.boss.name + ' still stands. You will restart at the arena gate.' : 'The jungle keeps what it takes. Your last checkpoint is waiting.'); return; } }
+  Game.hint = '';
   if (Game.debug.bot) bot(dt);
   if (St.cine) { I.moveX = I.moveY = 0; I.fire = I.ads = I.sprint = false; I.jumpPressed = I.rollPressed = false; P.invuln = Math.max(P.invuln, 0.3); if (Game.boss && Game.boss.state === 'intro') Game.boss.stateT = Math.max(Game.boss.stateT, St.cine.t); }
   Cam.compute(1, 0);
@@ -162,7 +165,7 @@ function step(dt) {
   if (spawnT <= 0 && !Game.bossFight && !Game.bossDead) { spawnT = 0.15; var n = E.count();
     for (var i = 0; i < pending.length && n < CFG.MAX_ACTIVE; i++) { var s = pending[i]; if (P.pos.z > s.trig) continue;
       E.spawn(s.type, s.x, s.z, s.type === 'sniper' ? { y: 4.88, alt: s.alt } : null); pending.splice(i, 1); i--; n++; } }
-  E.update(dt); H.update(dt); FX.updateBullets(dt); updatePickups(dt);
+  E.update(dt); H.update(dt); FX.updateBullets(dt); updatePickups(dt); JO.Codex.update(dt);
   if (P.dead) { I.endStep(); return; }
 
   for (var c = 0; c < W.checkpoints.length; c++) { var cp = W.checkpoints[c]; if (cp.reached || P.pos.z > cp.z) continue;
@@ -171,7 +174,7 @@ function step(dt) {
     snap = takeSnap(0, cp.z + 1.5, cp.z);
     A.play('checkpoint'); UI.banner('CHECKPOINT — HEALED AND RESUPPLIED', 2.2, false); Ev.emit('checkpoint', Game.levelIdx, c); }
   if (!Game.bossFight && !Game.bossDead && P.pos.z < W.A0 - 5) startBoss();
-  if (Game.bossDead && Math.hypot(P.pos.x - W.flag.x, P.pos.z - W.flag.z) < 2.8) { completeLevel(); I.endStep(); return; }
+  if (Game.bossDead && Math.hypot(P.pos.x - W.flag.x, P.pos.z - W.flag.z) < (JO.Finale.mira ? 4.2 : 2.8)) { if (JO.Finale.mira) JO.Finale.begin(); else completeLevel(); I.endStep(); return; }
 
   // boss-arena safety net so nobody is soft-locked without ammo or health
   if (Game.bossFight && !Game.bossDying) { supplyT -= dt;
@@ -199,7 +202,8 @@ function tick(real) {
     else { acc += real * Game.timescale; var n = 0; while (acc >= STEP && n < 5 && (Game.state === 'playing' || Game.state === 'dying')) { step(STEP); acc -= STEP; n++; }
       if (n === 5) acc = 0; alpha = acc / STEP; fdt = real * Game.timescale; }
   }
-  if (Game.state === 'title') {
+  if (Game.state === 'finale') { JO.Finale.camera(cam, real); P.animate(real); P.model.g.visible = true; W.update(real); FX.update(real, W.time); W.updateSun(P.pos.x, P.pos.z); }
+  else if (Game.state === 'title') {
     titleT += real; var z = -((titleT * 2.2) % 200) - 6;
     cam.position.set(Math.sin(titleT * 0.23) * 5, 3.6 + Math.sin(titleT * 0.4) * 0.6, z); cam.lookAt(Math.sin(titleT * 0.17) * 3, 2.6, z - 20);
     if (cam.fov !== 65) { cam.fov = 65; cam.updateProjectionMatrix(); }
@@ -244,7 +248,7 @@ Game.toggleDebug = function (on) {
 function bind(id, fn) { document.getElementById(id).addEventListener('click', function (e) { A.init(); A.play('ui'); fn(e); }); }
 Game.init = function () {
   var canvas = document.getElementById('game');
-  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas); St.init();
+  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas); St.init(); JO.Codex.init(W.scene); JO.Finale.init(W.scene);
   FX.pMat.uniforms.uScale.value = window.innerHeight;
   W.build(CFG.LEVELS[0]); P.model.g.visible = false;                       // title backdrop
   // models load behind the title screen; whatever fails simply stays primitive
@@ -268,6 +272,8 @@ Game.init = function () {
 
   bind('btnStart', function () { Game.startRun(0); });
   bind('btnControls', function () { UI.show('scrControls'); });
+  bind('btnCodex', function () { JO.Codex.open('scrTitle'); }); bind('btnPauseCodex', function () { JO.Codex.open('scrPause'); });
+  I.onCodex = function () { if (Game.state === 'playing') { togglePause(); if (Game.state === 'paused') JO.Codex.open('scrPause'); } };
   bind('btnControlsBack', function () { UI.show('scrTitle'); });
   bind('btnDeploy', function () { Game.beginPlay(); UI.banner(CFG.LEVELS[Game.levelIdx].name, 2.2, false); Ev.emit('level_start', Game.levelIdx); });
   bind('btnResume', function () { pauseAt = performance.now(); Game.pause(); });
@@ -312,7 +318,7 @@ function bot(dt) {
     else if (d < (best.isBoss ? 13 : 7)) I.moveY = -1; else if (d > 26 && best.type !== 'sniper') I.moveY = 0.7;
     if (rollT <= 0 && P.stamina > 45) { rollT = (sk < 0.7 ? 5 : 2.4) + Math.random(); I.rollPressed = true; }
   } else {
-    if (Game.bossDead) { gx = W.flag.x; gz = W.flag.z; } else if (Game.bossFight) { gx = Math.sin(botT) * 12; gz = W.AC + Math.cos(botT) * 12; } else { gx = 0; gz = P.pos.z - 12; }
+    if (Game.bossDead) { gx = W.flag.x; gz = W.flag.z; } else if (Game.bossFight && Game.boss.state === 'beaten') { gx = Game.boss.pos.x; gz = Game.boss.pos.z; if (Game.debug.finish) I.meleePressed = true; else if (Game.boss.dist < 6) I.interactPressed = true; } else if (Game.bossFight) { gx = Math.sin(botT) * 12; gz = W.AC + Math.cos(botT) * 12; } else { gx = 0; gz = P.pos.z - 12; }
     P.pitch = -0.05; P.yaw = Math.atan2(gx - P.pos.x, gz - P.pos.z); I.moveY = 1; I.sprint = true;
     if (sideT > 0) { sideT -= dt; I.moveX = sideDir; }
   }

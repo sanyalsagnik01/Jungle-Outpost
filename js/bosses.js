@@ -90,7 +90,7 @@ var ANIM = {
       var w = k.fx.fx_weak; if (w) w.emissive.setHex(b.state === 'stun' ? (Math.sin(b.t * 14) > 0 ? 0xffb040 : 0x8a3000) : 0x401800); }
   },
   phantom: {
-    enter: { intro: ['phase_change', FULL], tel: function (b) { return b.next === 'burst' ? ['reload', FULL] : ['attack', FULL]; }, attack: ['shoot', { hold: true }], dashTel: ['special', HOLD] },
+    enter: { intro: ['phase_change', FULL], tel: function (b) { return b.next === 'burst' ? ['reload', FULL] : ['attack', FULL]; }, attack: ['shoot', { hold: true }], dashTel: ['special', HOLD], beaten: ['hit', HOLD] },
     repeat: {},
     loop: function (b) { return b.state === 'dash' ? ['run', 2] : (b.moving ? ['walk', 1] : ['idle', 1]); },
     post: function (b, k) { k.setOpacity(b.opacity); }
@@ -227,11 +227,17 @@ function Phantom(x, z) {
   var k = attach(this, 'phantom', 1 / 1.18); if (k) k.addWire(this.wire);                       // model is authored at full size; the anchor is scaled
 }
 Phantom.prototype.aimPoint = function (o) { o.x = this.pos.x; o.y = 1.3; o.z = this.pos.z; };
+Phantom.prototype.invulnerable = function () { return this.state === 'wait' || this.state === 'intro' || this.state === 'beaten' || !this.alive; };
 Phantom.prototype.takeHit = function (dmg, p) {
   R.dealt = 0; R.blocked = false; R.head = false; R.crit = false; R.killed = false; R.silent = false;
+  if (this.state === 'beaten') { if (this.stateT > 1.6) this.hurt(9999); else { R.blocked = true; R.silent = true; } return R; }
   if (this.invulnerable()) { R.blocked = true; R.silent = true; return R; }
   if (p.tag === 'head') R.head = true;
-  this.hurt(dmg * p.mult * (this.state === 'cloaked' ? 0.5 : 1)); if (!this.alive) return R;
+  var dm = dmg * p.mult * (this.state === 'cloaked' ? 0.5 : 1);
+  if (this.hp - dm <= 0 && !this.beaten && !JO.Game.mode) {                 // beaten, not dead: the player decides
+    this.beaten = true; this.hp = 1; this.state = 'beaten'; this.stateT = 0; R.dealt = dm; if (this.line) this.line.life = 0;
+    H.reset(); FX.clearBullets(); E.clearRegulars(true); A.play('teleport'); FX.burst(this.pos.x, 1.4, this.pos.z, 26, 0x58e0d0, 6, 0.7, 0, 0.2); JO.Events.emit('boss_beaten', this); return R; }
+  this.hurt(dm); if (!this.alive) return R;
   if (this.phase === 1 && this.hp < this.maxHp * 0.5) { this.setPhase(2, 'THE PHANTOM UNLEASHES POISON'); this.droneT = 0.5; }
   else if (this.phase === 2 && this.hp < this.maxHp * this.cfg.finalAt) this.setPhase(3, 'FINAL STAGE — WATCH THE RED LINE');
   return R;
@@ -260,6 +266,13 @@ Phantom.prototype.update = function (dt) {
   if (!this.alive) { this.dyingUpdate(dt); this.setOpacity(1, dt); return; }
   if (this.state === 'wait') { this.yaw = E.turnToward(this.yaw, Math.atan2(this.ndx, this.ndz), dt * 2); target = 0.5 + Math.sin(this.t * 3) * 0.3; }
   else if (P.dead) { target = 0.3; }
+  else if (this.state === 'beaten') {                                        // kneeling, waiting for the player's choice
+    target = 1; this.stateT += dt; this.yaw = E.turnToward(this.yaw, Math.atan2(this.ndx, this.ndz), dt * 3); var In = JO.Input;
+    JO.Game.hint = In.isTouch ? 'HE IS BEATEN — WALK UP AND TAP <kbd>USE</kbd> TO SPARE HIM, OR SHOOT TO FINISH' : 'HE IS BEATEN — <kbd>E</kbd> SPARE HIM (WALK CLOSE) &nbsp; <kbd>F</kbd> FINISH HIM';
+    if (In.interactPressed && this.dist < 7) { this.spared = true; this.alive = false; this.done = true; this.mesh.visible = false; this.hideExtras(); JO.Game.hint = '';
+      FX.burst(this.pos.x, 1.2, this.pos.z, 30, 0x58e0d0, 6, 0.8, 0, 0.22); A.play('checkpoint'); JO.Events.emit('boss_spared', this); JO.Game.onBossDead(this); return; }
+    if (In.meleePressed && this.stateT > 0.5) { JO.Game.hint = ''; this.hurt(9999); return; }
+  }
   else if (this.state === 'intro') { this.stateT -= dt; target = 1; if (this.stateT <= 0) { this.state = 'cloaked'; this.stateT = 0.8; } }
   else if (this.state === 'cloaked') {
     target = 0.07; this.stateT -= dt; E.moveToward(this, this.pos.x - this.ndz * 3, this.pos.z + this.ndx * 3, 2.2, dt);
@@ -284,7 +297,7 @@ Phantom.prototype.update = function (dt) {
     FX.burst(this.pos.x, 1.1, this.pos.z, 2, 0xff5050, 2, 0.3, 0, 0.2);
     if (!this.hitDone && this.dist < 1.6 && P.pos.y < 2) { this.hitDone = true; P.damage(c.dashDmg, this.pos.x - this.cdx, this.pos.z - this.cdz, 'dash'); }
     this.stateT -= dt; if (this.stateT <= 0) { this.state = 'visible'; this.stateT = c.visibleTime + 0.4; } }
-  if (this.phase >= 2 && this.alive && this.state !== 'wait') { this.droneT -= dt;                // drone escorts
+  if (this.phase >= 2 && this.alive && this.state !== 'wait' && this.state !== 'beaten') { this.droneT -= dt;                // drone escorts
     if (this.droneT <= 0) { this.droneT = 5; if (E.countType('drone') === 0 && E.count() <= CFG.MAX_ACTIVE - 2) { this.droneT = 28; A.play('warn'); JO.UI.banner('SCOUT DRONES DEPLOYED', 1.6, true);
       E.spawn('drone', -18, W.AC - 10, { alert: true, summoned: true }); E.spawn('drone', 18, W.AC + 10, { alert: true, summoned: true }); } } }
   this.setOpacity(target, dt);

@@ -77,7 +77,7 @@ St.skip = function () { if (St.cine) { St.cine.t = 0; return true; } if (!St.cur
 St.clear = function () { St.queue.length = 0; stopAudio(); St.cur = null; if (el.dlg) el.dlg.classList.add('hidden'); if (el.bark) el.bark.style.opacity = 0; barkCur = null; };
 St.reset = function () { St.clear(); fired = {}; St.endCine(); };
 St.busy = function () { return !!(St.cur || St.queue.length); };
-St.pause = function (on) { if (curAudio) { try { if (on) curAudio.pause(); else curAudio.play().catch(function () {}); } catch (e) { /* ignore */ } } };
+St.pause = function (on) { document.body.classList.toggle('paused', !!on); if (curAudio) { try { if (on) curAudio.pause(); else curAudio.play().catch(function () {}); } catch (e) { /* ignore */ } } };
 
 St.update = function (dt) {
   clock += dt; var c = St.cur;
@@ -176,13 +176,14 @@ St.init = function () {
   el.dlg.addEventListener('click', St.skip);
   window.addEventListener('keydown', function (e) { if (e.repeat) return;
     if (cut) { if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); St.cutNext(); } else if (e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); St.cutSkip(); } }
-    else if (e.code === 'Enter' && JO.Game.state === 'playing') St.skip(); }, true);
+    else if (e.code === 'Enter' && (JO.Game.state === 'playing' || JO.Game.state === 'finale' || JO.Game.state === 'win')) St.skip(); }, true);
   Ev.on('level_load', function () { St.reset(); seenType = {}; headT.length = killT.length = 0; });
   Ev.on('level_start', function (i) { St.trigger('level_start:' + i); });
   Ev.on('checkpoint', function (l, i) { St.trigger('checkpoint:' + l + ':' + i); });
   Ev.on('boss_start', function (b, first) { if (first) { St.clear(); St.startCine(b); } St.trigger('boss_intro:' + b.kind); });
   Ev.on('boss_phase', function (b, n) { St.clear(); St.trigger('boss_phase:' + b.kind + ':' + n); });
   Ev.on('boss_stun', function (b) { St.trigger('boss_stun:' + b.kind); });
+  Ev.on('boss_beaten', function (b) { St.clear(); St.trigger('boss_beaten:' + b.kind); }); Ev.on('boss_spared', function (b) { St.clear(); St.trigger('boss_spared:' + b.kind); });
   Ev.on('boss_dying', function (b) { St.clear(); fired['boss_death:' + b.kind] = false; St.trigger('boss_death:' + b.kind); });
   Ev.on('enemy_alert', function (e) { if (!seenType[e.type]) { seenType[e.type] = true; if (St.trigger('first:' + e.type)) return; } St.bark('alert', e); });
   Ev.on('enemy_hurt', function (e) { if (Math.random() < 0.25) St.bark('hurt', e); });
