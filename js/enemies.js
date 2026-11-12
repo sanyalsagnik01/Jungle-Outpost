@@ -48,6 +48,7 @@ function fireBullet(e, spreadDeg, speed, dmg, hex, height) {
   var nx = tx * c - tz * s, nz = tx * s + tz * c; ty += (Math.random() - Math.random()) * sp * 0.6;
   l = Math.sqrt(nx * nx + ty * ty + nz * nz); FX.bullet(mx, my, mz, nx / l, ty / l, nz / l, speed, dmg, hex);
   FX.burst(mx, my, mz, 2, 0xffd060, 2.5, 0.08, 0, 0.12);
+  if (e.gfx && !e.isBoss) e.gfx.playOnce('shoot');
 }
 E.fireBullet = fireBullet;
 function clampTarget(e) { var hw = W.halfWidth(e.tz) - 1; if (e.tx > hw) e.tx = hw; else if (e.tx < -hw) e.tx = -hw; }
@@ -79,6 +80,26 @@ function Enemy(type) {
     this.laser = new THREE.Mesh(G.box, this.laserMat); this.dot = new THREE.Mesh(G.ico0, new THREE.MeshBasicMaterial({ color: 0xff2a10, fog: false }));
     this.laser.visible = this.dot.visible = false; this.laser.frustumCulled = false; E.scene.add(this.laser); E.scene.add(this.dot);
   }
+  // GLB presentation (optional): the primitive group stays as the anchor and as the fallback
+  this.gfx = JO.Assets.instantiate(type); this.gun = null; this.hand = null;
+  if (this.gfx) {
+    for (var i = 0; i < this.mesh.children.length; i++) this.mesh.children[i].visible = false;
+    this.mesh.add(this.gfx.root); this.hand = this.gfx.socket('socket_hand.R');
+    if (GUNS[type]) { this.gun = JO.Assets.instantiate(GUNS[type]); if (this.gun) this.mesh.add(this.gun.root); }
+  }
+}
+var GUNS = { rifleman: 'ar', sniper: 'marksman' }, TV = new THREE.Vector3();
+// state machine -> animation clips (see models/README.md)
+function animate(e, dt) {
+  var k = e.gfx, t = e.type, sp = Math.hypot(e.pos.x - e._ax, e.pos.z - e._az) / dt; e._ax = e.pos.x; e._az = e.pos.z; e.spd += (sp - e.spd) * Math.min(1, dt * 10);
+  if (t === 'drone') k.play(e.sub === 'dive' || e.sub === 'diveTel' ? 'dive' : 'hover', 1);
+  else if (e.spd < 0.35) k.play('idle', 1);
+  else if (e.spd < 3 || t === 'shield' || t === 'grenadier') k.play('walk', Math.max(0.6, Math.min(1.7, e.spd / 1.9)));
+  else k.play('run', Math.max(0.7, Math.min(1.6, e.spd / 4.6)));
+  if (e.sub !== e._sub) { if (e.sub === 'windup' || e.sub === 'throw') k.playOnce('attack'); e._sub = e.sub; }
+  k.tint = e.tint || E.baseEmis; k.update(dt);
+  if (e.gun && e.hand) { e.mesh.updateMatrixWorld(true); e.hand.getWorldPosition(TV); e.mesh.worldToLocal(TV); e.gun.root.position.copy(TV);
+    e.gun.root.rotation.x = e.state === 'patrol' ? 0 : -Math.atan2(JO.Player.pos.y - e.pos.y - 0.3, Math.max(2, e.dist)); }
 }
 var EP = Enemy.prototype;
 EP.spawn = function (x, z, o) {
@@ -93,6 +114,8 @@ EP.spawn = function (x, z, o) {
   if (this.type === 'drone') this.pos.y = 4;
   for (var i = 0; i < this.mats.length; i++) { var m = this.mats[i]; m.transparent = false; m.opacity = 1; m.emissive.setHex(0); m.needsUpdate = true; }
   this.emis = 0; this.mesh.visible = true; this.mesh.rotation.set(0, this.yaw, 0); this.mesh.position.copy(this.pos); this.mesh.scale.setScalar(1);
+  this._sub = ''; this._deathAnim = false; this.spd = 0; this._ax = x; this._az = z;
+  if (this.gfx) { this.gfx.reset(); this.gfx.play(this.type === 'drone' ? 'hover' : 'idle', 1); if (this.gun) this.gun.root.visible = true; }
   return this;
 };
 EP.setAlert = function () {
@@ -107,6 +130,7 @@ EP.takeHit = function (dmg, part, dx, dz, hy, headMult) {
     if (dx * Math.sin(this.yaw) + dz * Math.cos(this.yaw) < -0.3) { R.blocked = true; this.alerted = true; return R; } }
   if (part.tag === 'head') { dmg *= headMult; R.head = true; }
   this.hp -= dmg; R.dealt = dmg; this.flash = 0.09; this.alerted = true;
+  if (this.gfx) { this.gfx.flash(0x8a8a8a, 0.09); if (this.hp > 0 && this.sub !== 'windup' && this.sub !== 'throw') this.gfx.playOnce('hit'); }
   if (this.hp <= 0) { this.die(); R.killed = true; }
   else {
     if (this.state === 'patrol') this.setAlert();
@@ -127,11 +151,17 @@ EP.deadUpdate = function (dt) {
   if (this.type === 'drone') {                                  // falls, then explodes
     this.vy -= 20 * dt; this.pos.y += this.vy * dt; this.mesh.rotation.x += dt * 7; this.mesh.rotation.z += dt * 5;
     if (Math.random() < 0.5) FX.puff(this.pos.x, this.pos.y, this.pos.z, 0x444444, 0.28);
-    this.mesh.position.copy(this.pos);
+    this.mesh.position.copy(this.pos); if (this.gfx) this.gfx.update(dt);
     if (this.pos.y <= 0.3) { H.explode(this.pos.x, 0.4, this.pos.z, 2.6, 8); E.release(this); }
     return;
   }
   if (this.pos.y > 0) this.pos.y = Math.max(0, this.pos.y - dt * 10);
+  if (this.gfx) {                                                  // death clip, then dissolve
+    if (!this._deathAnim) { this._deathAnim = true; this.gfx.playOnce('death', { full: true, hold: true }); if (this.gun) this.gun.root.visible = false; }
+    this.mesh.position.copy(this.pos); this.gfx.setDissolve((this.deadT - 0.65) / 0.55); this.gfx.update(dt);
+    if (this.deadT > 1.22) E.release(this);
+    return;
+  }
   this.mesh.rotation.x = Math.max(-1.5, -this.deadT * 5); this.mesh.position.copy(this.pos); this.mesh.position.y += 0.12;
   if (this.deadT > 0.5) { var op = 1 - (this.deadT - 0.5) / 0.7;
     if (op <= 0) { E.release(this); return; } for (var i = 0; i < this.mats.length; i++) this.mats[i].opacity = op; }
@@ -155,6 +185,7 @@ EP.update = function (dt) {
   else M.walk(m, this.walk, this.moving ? 1 : 0, this.type === 'runner' && this.sub !== 'windup');
   var em = this.flash > 0 ? 0x777777 : (this.tint || E.baseEmis); if (this.flash > 0) this.flash -= dt;
   if (em !== this.emis) { this.emis = em; for (var k = 0; k < this.mats.length; k++) this.mats[k].emissive.setHex(em); }
+  if (this.gfx) animate(this, dt);
 };
 
 function patrol(e, dt) {

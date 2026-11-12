@@ -24,6 +24,12 @@ PALETTE = [
     ('orange', 0xff8a20), ('yellow', 0xffd24a), ('white', 0xe9e4cf), ('olive', 0x6b7a3a),
     ('tan', 0x9a8454), ('slate', 0x3c4658), ('slate_light', 0x7f8ea8), ('purple', 0x3a2a55),
     ('cyan', 0x58e0d0), ('green_glow', 0x7fe04a), ('rust', 0x8a4a22), ('stone', 0x8d9088),
+    # --- added in phase 2 (enemies and bosses) ---
+    ('olive_dark', 0x4a5528), ('orange_cloth', 0xb5722a), ('brown_dark', 0x3a2a1a), ('skin_tan', 0xa9744a),
+    ('skin_tan_dark', 0x85552f), ('ghillie', 0x2f4a2a), ('ghillie_dark', 0x1c2e1a), ('tan_dark', 0x6e5c38),
+    ('slate_dark', 0x1e232c), ('steel_dark', 0x44484e), ('hull', 0x5a6052), ('hull_dark', 0x363c33),
+    ('purple_dark', 0x16121f), ('pale', 0x9a8aa8), ('black', 0x0c0c0c), ('lens_red', 0xff3020),
+    ('skin_pale', 0xc49062), ('skin_pale_dark', 0x9c6c44), ('hazard', 0xd0b020), ('bone', 0xd8d2bc),
 ]
 CELLS = 8
 _IDX = {n: i for i, (n, _) in enumerate(PALETTE)}
@@ -73,6 +79,8 @@ def reset_scene():
         for d in list(coll):
             if d.users == 0: coll.remove(d)
     for a in list(bpy.data.actions): bpy.data.actions.remove(a)
+    for m in [m for m in bpy.data.materials if m.name.startswith('JO_Palette')]: bpy.data.materials.remove(m)      # palette may have grown
+    for im in [im for im in bpy.data.images if im.name.startswith('jo_palette')]: bpy.data.images.remove(im)
     bpy.context.scene.render.fps = FPS; bpy.context.scene.frame_set(1)
 
 

@@ -1,7 +1,7 @@
 # JUNGLE OUTPOST
 
 A browser 3D third-person shooter. Three levels, six enemy types, three multi-phase bosses.
-Scenery, enemies and effects are Three.js primitives; the player and weapons are low-poly GLB models built in Blender. Sound is WebAudio synthesis. No build step.
+The player, weapons, all six enemies and the three bosses are low-poly GLB models built in Blender; scenery and effects are Three.js primitives. Sound is WebAudio synthesis. No build step.
 
 ## Start
 
@@ -38,7 +38,7 @@ Touch devices get a virtual joystick (left), a look area (right) and FIRE / JUMP
 
 ## Models
 
-The player (Kade) and the weapons are GLB models built in Blender; see `models/README.md` for the asset list, triangle counts and clip names. Models load behind the title screen with a progress bar. Anything that fails to load is replaced by the original primitive version, so the game always runs.
+The player (Kade), the weapons, the enemies and the bosses are GLB models built in Blender; see `models/README.md` for the asset list, triangle counts and clip names. Models load behind the title screen with a progress bar. Anything that fails to load is replaced by the original primitive version, so the game always runs.
 
 Press **F3** in play for a debug panel: the model, triangle count and active animation of whatever is under the crosshair, plus what the asset layer loaded.
 

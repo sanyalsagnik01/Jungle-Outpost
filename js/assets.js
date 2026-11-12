@@ -19,6 +19,7 @@
 var JO = window.JO;
 var A = JO.Assets = { entries: {}, status: {}, total: 0, done: 0, ready: false, log: [] };
 
+var HUMAN = ['idle', 'walk', 'run', 'shoot', 'reload', 'hit', 'death', 'attack'], BOSS = HUMAN.concat(['phase_change', 'special']), LOCO = ['idle', 'walk', 'run'];
 // name -> file, triangle budget, and the exact clip names the game expects
 A.manifest = {
   kade:          { file: 'models/kade.glb', kind: 'character', budget: 5000,
@@ -29,10 +30,21 @@ A.manifest = {
   crossbow:      { file: 'models/crossbow.glb', kind: 'weapon', budget: 1500 },
   flamethrower:  { file: 'models/flamethrower.glb', kind: 'weapon', budget: 1500 },
   frag_grenade:  { file: 'models/frag_grenade.glb', kind: 'weapon', budget: 1500 },
-  smoke_grenade: { file: 'models/smoke_grenade.glb', kind: 'weapon', budget: 1500 }
+  smoke_grenade: { file: 'models/smoke_grenade.glb', kind: 'weapon', budget: 1500 },
+  // enemies (same rig and clip names as Kade) and bosses (plus phase_change, special)
+  rifleman:  { file: 'models/rifleman.glb', kind: 'enemy', budget: 3500, clips: HUMAN, loops: LOCO },
+  runner:    { file: 'models/runner.glb', kind: 'enemy', budget: 3500, clips: HUMAN, loops: LOCO },
+  sniper:    { file: 'models/sniper.glb', kind: 'enemy', budget: 3500, clips: HUMAN, loops: LOCO },
+  grenadier: { file: 'models/grenadier.glb', kind: 'enemy', budget: 3500, clips: HUMAN, loops: LOCO },
+  shield:    { file: 'models/shield.glb', kind: 'enemy', budget: 3500, clips: HUMAN, loops: LOCO },
+  drone:     { file: 'models/drone.glb', kind: 'enemy', budget: 3500, clips: ['hover', 'dive'], loops: ['hover', 'dive'] },
+  brute:     { file: 'models/brute.glb', kind: 'boss', budget: 12000, clips: BOSS, loops: LOCO },
+  phantom:   { file: 'models/phantom.glb', kind: 'boss', budget: 12000, clips: BOSS, loops: LOCO },
+  commander: { file: 'models/commander.glb', kind: 'boss', budget: 12000, clips: BOSS, loops: LOCO }
 };
 // bones driven by upper-body overlays (three strips the dots: "upper_arm.L" -> "upper_armL")
-var UPPER = /^(spine|chest|head|upper_arm|forearm|hand|socket_hand|socket_back)/;
+// (the walker's turret, gun and missile pods count as its "upper body")
+var UPPER = /^(spine|chest|head|upper_arm|forearm|hand|socket_hand|socket_back|shield|cloak|barrel|turret|gun|pod)/;
 
 function b64ToBuffer(s) { var bin = atob(s), n = bin.length, u = new Uint8Array(n); for (var i = 0; i < n; i++) u[i] = bin.charCodeAt(i); return u.buffer; }
 function fetchBuffer(url, cb) {
@@ -127,15 +139,16 @@ function Model(e) {
   var self = this;
   this.entry = e; this.name = e.name; this.tris = e.tris;
   this.root = e.skinned ? THREE.SkeletonUtils.clone(e.scene) : e.scene.clone(true);
-  this.mats = []; this.nodes = {}; this.uDissolve = { value: 0 }; this.flashT = 0; this.emis = 0;
+  this.mats = []; this.fx = {}; this.fxMats = []; this.skinned = []; this.nodes = {}; this.uDissolve = { value: 0 }; this.flashT = 0; this.emis = 0; this.tint = 0;
   var cloned = {};
   this.root.traverse(function (o) {
     self.nodes[o.name] = o;
     if (!o.isMesh) return;
-    var m = cloned[o.material.uuid];
-    if (!m) { m = cloned[o.material.uuid] = o.material.clone(); m.skinning = o.material.skinning;
+    var isFx = o.name.indexOf('fx_') === 0, key = o.material.uuid + (isFx ? o.name : ''), m = cloned[key];        // fx_* meshes glow on their own
+    if (o.isSkinnedMesh && !isFx) self.skinned.push(o);
+    if (!m) { m = cloned[key] = o.material.clone(); m.skinning = o.material.skinning;
       m.onBeforeCompile = function (sh) { sh.uniforms.uDissolve = self.uDissolve; sh.fragmentShader = sh.fragmentShader.replace('void main() {', DISSOLVE_HEAD); };
-      self.mats.push(m); }
+      if (isFx) { self.fx[o.name] = m; self.fxMats.push(m); } else self.mats.push(m); }
     o.material = m;
   });
   // animation layers
@@ -176,10 +189,19 @@ MP.playOnce = function (name, opts) {
 MP.stopShot = function () { if (this.shot) { this.shot.hold = false; this.shotT = Math.max(this.shotT, this.shot.len - 0.1); } };
 MP.reset = function () {
   if (this.shot) { this.shot.act.setEffectiveWeight(0); this.shot.act.paused = true; this.shot = null; }
-  this.shotW = 0; this.setDissolve(0); this.flashT = 0;
+  this.shotW = 0; this.setDissolve(0); this.flashT = 0; this.tint = 0;
 };
 MP.activeClip = function () { return this.loop + (this.shot ? ' + ' + this.shot.name : ''); };
 MP.flash = function (hex, secs) { this.flashT = secs || 0.09; this.flashHex = hex || 0x777777; };
+MP.setOpacity = function (k) {
+  if (k === this.opacity) return; this.opacity = k; var all = this.mats.concat(this.fxMats);
+  for (var i = 0; i < all.length; i++) { all[i].transparent = k < 0.995; all[i].opacity = k; }
+};
+// extra wireframe copy of every skinned mesh, driven by the same skeleton (the Phantom's shimmer)
+MP.addWire = function (mat) {
+  mat.skinning = true;
+  for (var i = 0; i < this.skinned.length; i++) { var o = this.skinned[i], w = new THREE.SkinnedMesh(o.geometry, mat); w.bind(o.skeleton, o.bindMatrix); w.frustumCulled = false; o.parent.add(w); }
+};
 MP.setDissolve = function (k) { this.uDissolve.value = k < 0 ? 0 : (k > 1 ? 1 : k); };
 MP.socket = function (name) { return this.nodes[name] || this.nodes[name.replace(/\./g, '')] || null; };
 MP.update = function (dt) {
@@ -199,8 +221,8 @@ MP.update = function (dt) {
     if (this.shot) this.shot.act.setEffectiveWeight(sw);
     this.mixer.update(dt);
   }
-  var em = 0; if (this.flashT > 0) { this.flashT -= dt; em = this.flashHex; }
+  var em = this.tint || 0; if (this.flashT > 0) { this.flashT -= dt; em = this.flashHex; }
   if (em !== this.emis) { this.emis = em; for (k = 0; k < this.mats.length; k++) this.mats[k].emissive.setHex(em); }
 };
-MP.dispose = function () { if (this.root.parent) this.root.parent.remove(this.root); for (var i = 0; i < this.mats.length; i++) this.mats[i].dispose(); if (this.mixer) this.mixer.stopAllAction(); };
+MP.dispose = function () { if (this.root.parent) this.root.parent.remove(this.root); var all = this.mats.concat(this.fxMats); for (var i = 0; i < all.length; i++) all[i].dispose(); if (this.mixer) this.mixer.stopAllAction(); };
 })();

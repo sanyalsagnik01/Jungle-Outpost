@@ -27,15 +27,29 @@ var proto = {
     this.dist = Math.hypot(dx, dz) || 0.001; this.ndx = dx / this.dist; this.ndz = dz / this.dist; this.moving = false;
     var em = this.flash > 0 ? 0x555555 : this.tint; if (this.flash > 0) this.flash -= dt;
     if (em !== this.emis) { this.emis = em; for (var i = 0; i < this.mats.length; i++) this.mats[i].emissive.setHex(em || this.mats[i].userData.base); }
-    this.tint = 0;
+    this._tint = this.tint; this.tint = 0;
   },
   start: function () { if (this.state !== 'wait') return; this.state = 'intro'; this.stateT = 1.8; A.play('roar'); FX.addShake(0.5); },
   invulnerable: function () { return this.state === 'wait' || this.state === 'intro' || !this.alive; },
   hurt: function (d) {
-    this.hp -= d; this.flash = 0.07; R.dealt = d;
+    this.hp -= d; this.flash = 0.07; R.dealt = d; if (this.gfx) this.gfx.flash(0x666666, 0.07);
     if (this.hp <= 0) { this.hp = 0; R.killed = true; this.alive = false; this.dying = this.kind === 'commander' ? 2.6 : 1.5; this.dieStart(); JO.Game.onBossDying(this); }
   },
   dieStart: function () {},
+  animate: function (dt) {
+    var k = this.gfx, T = ANIM[this.kind], st = this.alive ? this.state : 'dead';
+    if (st !== this._ast) {
+      var en = T.enter[st]; if (typeof en === 'function') en = en(this);
+      if (st === 'dead') k.playOnce('death', HOLD);
+      else if (en && en !== 'keep') k.playOnce(en[0], en[1]);
+      else if (!en && k.shot && k.shot.name !== 'phase_change') k.stopShot();
+      this._ast = st;
+    } else if (T.repeat[st] && !k.shot) k.playOnce(T.repeat[st]);
+    var lp = T.loop(this); k.play(lp[0], lp[1]);
+    k.tint = this.alive ? this._tint : 0; k.update(dt);
+    if (!this.alive) k.setDissolve(1 - this.dying / 0.45);
+    T.post(this, k, dt);
+  },
   dyingUpdate: function (dt) {
     this.dying -= dt; this.mesh.position.x = this.pos.x + (Math.random() - 0.5) * 0.25; this.mesh.position.z = this.pos.z + (Math.random() - 0.5) * 0.25;
     this.boomT = (this.boomT || 0) - dt;
@@ -48,11 +62,51 @@ var proto = {
   hideExtras: function () { for (var i = 0; i < this.extra.length; i++) this.extra[i].visible = false; },
   dispose: function () {
     E.scene.remove(this.mesh); for (var i = 0; i < this.extra.length; i++) { E.scene.remove(this.extra[i]); if (this.extra[i].material) this.extra[i].material.dispose(); }
-    for (var k = 0; k < this.mats.length; k++) this.mats[k].dispose(); if (this.line) this.line.life = 0;
+    for (var k = 0; k < this.mats.length; k++) this.mats[k].dispose(); if (this.line) this.line.life = 0; if (this.gfx) this.gfx.dispose();
   },
-  setPhase: function (n, msg) { this.phase = n; this.atkI = 0; A.play('roar'); FX.addShake(0.7); JO.UI.banner(msg, 2.6, true); FX.burst(this.pos.x, 2.5, this.pos.z, 30, 0xff5030, 9, 0.8, 6, 0.24, 3); }
+  setPhase: function (n, msg) { this.phase = n; this.atkI = 0; if (this.gfx) this.gfx.playOnce('phase_change', FULL); A.play('roar'); FX.addShake(0.7); JO.UI.banner(msg, 2.6, true); FX.burst(this.pos.x, 2.5, this.pos.z, 30, 0xff5030, 9, 0.8, 6, 0.24, 3); }
 };
-function extend(C) { for (var k in proto) if (!C.prototype[k]) C.prototype[k] = proto[k]; }
+function extend(C) {
+  for (var k in proto) if (!C.prototype[k]) C.prototype[k] = proto[k];
+  C.prototype._update = C.prototype.update;
+  C.prototype.update = function (dt) { this._update(dt); if (this.gfx && !this.done) this.animate(dt); };
+}
+// swap the primitive body for the GLB (if it loaded); the primitive group stays as anchor + fallback
+function attach(self, name, scale) {
+  var k = JO.Assets.instantiate(name); if (!k) return null;
+  for (var i = 0; i < self.mesh.children.length; i++) self.mesh.children[i].visible = false;
+  if (scale) k.root.scale.setScalar(scale);
+  self.mesh.add(k.root); self.gfx = k; self._ast = ''; return k;
+}
+/* boss state -> clip tables.  enter: one-shot when a state begins ('keep' = leave the current one running);
+   repeat: one-shot that re-triggers while the state lasts;  loop: [clip, timeScale] for the base layer */
+var HOLD = { full: true, hold: true }, FULL = { full: true };
+var ANIM = {
+  brute: {
+    enter: { intro: ['phase_change', FULL], sweepTel: ['reload', HOLD], chargeTel: ['special', HOLD], stun: ['hit', HOLD], slamTel: ['attack', FULL] },
+    repeat: { sweep: 'shoot' },
+    loop: function (b) { return b.state === 'charge' ? ['run', 1.5] : (b.state === 'walk' && b.moving ? ['walk', b.phase === 2 ? 1.0 : 0.67] : ['idle', 1]); },
+    post: function (b, k) { b.mesh.position.y = 0; b.mesh.rotation.x = 0;
+      var w = k.fx.fx_weak; if (w) w.emissive.setHex(b.state === 'stun' ? (Math.sin(b.t * 14) > 0 ? 0xffb040 : 0x8a3000) : 0x401800); }
+  },
+  phantom: {
+    enter: { intro: ['phase_change', FULL], tel: function (b) { return b.next === 'burst' ? ['reload', FULL] : ['attack', FULL]; }, attack: ['shoot', { hold: true }], dashTel: ['special', HOLD] },
+    repeat: {},
+    loop: function (b) { return b.state === 'dash' ? ['run', 2] : (b.moving ? ['walk', 1] : ['idle', 1]); },
+    post: function (b, k) { k.setOpacity(b.opacity); }
+  },
+  commander: {
+    enter: { intro: ['phase_change', FULL], missTel: ['reload', { hold: true }], miss: 'keep', stompTel: ['attack', FULL], laserTel: ['special', HOLD], laser: 'keep' },
+    repeat: { mg: 'shoot' },
+    loop: function (b) { return b.moving ? [b.phase === 3 ? 'run' : 'walk', 1] : ['idle', 1]; },
+    post: function (b, k) {
+      var n = k.nodes, open = b.phase === 3;
+      if (n.turret) n.turret.rotation.y = b.tyaw - b.yaw;                                    // the game aims the turret; clips only add recoil
+      if (n.panel_front) n.panel_front.visible = n.panel_L.visible = n.panel_R.visible = !open;
+      if (n.fx_core) { n.fx_core.visible = open; if (open && k.fx.fx_core) { var pu = 0.5 + Math.sin(b.t * 9) * 0.5; k.fx.fx_core.emissive.setRGB(0.9 * pu, 0.35 * pu, 0.05); } }
+    }
+  }
+};
 function shoot(x, y, z, yaw, dist, spreadDeg, speed, dmg, hex) {
   var a = yaw + (Math.random() - Math.random()) * spreadDeg * DEG, dx = Math.sin(a), dz = Math.cos(a), d = Math.max(5, dist), dy = (1.0 - y) / d + (Math.random() - 0.5) * spreadDeg * DEG;
   var l = Math.sqrt(dx * dx + dy * dy + dz * dz); FX.bullet(x, y, z, dx / l, dy / l, dz / l, speed, dmg, hex, 0, 1.25);
@@ -81,6 +135,7 @@ function Brute(x, z) {
     { k: 's', oz: -1.2, oy: 2.55, r: 0.8, tag: 'weak', mult: c.weakMult, bias: 0.25 }
   ];
   this.bound = 5; this.boundY = 2.3; this.spark = 0xffc060; this.summonT = 4; this.yaw = 0; this.cdx = 0; this.cdz = 1; this.hitDone = false;
+  attach(this, 'brute');
 }
 Brute.prototype.aimPoint = function (o) {
   var back = this.state === 'stun' || (Math.sin(this.yaw) * this.ndx + Math.cos(this.yaw) * this.ndz) < -0.2;
@@ -169,6 +224,7 @@ function Phantom(x, z) {
   var w2 = new THREE.Mesh(G.ico0, this.wire); w2.scale.setScalar(0.75); w2.position.set(0, 1.75, 0); o.g.add(w2);
   this.parts = [{ k: 'c', y0: 0, y1: 1.78, r: 0.52, tag: 'body', mult: 1 }, { k: 's', oy: 2.0, r: 0.33, tag: 'head', mult: 1.6 }];
   this.bound = 3; this.boundY = 1.1; this.radius = 0.5; this.opacity = 1; this.spark = 0xa070ff; this.next = 'burst'; this.droneT = 0; this.burst = 0; this.shotT = 0; this.alt = 0;
+  var k = attach(this, 'phantom', 1 / 1.18); if (k) k.addWire(this.wire);                       // model is authored at full size; the anchor is scaled
 }
 Phantom.prototype.aimPoint = function (o) { o.x = this.pos.x; o.y = 1.3; o.z = this.pos.z; };
 Phantom.prototype.takeHit = function (dmg, p) {
@@ -277,6 +333,7 @@ function Commander(x, z) {
   this.parts = [{ k: 'c', y0: 0, y1: 2.4, r: 2.2, tag: 'armor', mult: c.armorMult * 0.75 }, { k: 'c', y0: 2.4, y1: 4.5, r: 2.55, tag: 'armor', mult: c.armorMult },
     { k: 's', oy: 5.1, r: 1.0, tag: 'armor', mult: c.armorMult }, this.corePart];
   this.bound = 7; this.boundY = 3; this.radius = 2.6; this.spark = 0xffd070; this.tyaw = 0; this.shieldDownT = 0; this.beamCd = 0; this.sx = 0; this.sz = 0; this.markT = 0; this.second = 0; this.launched = 0; this.yaw = 0; this.immuneT = 0;
+  attach(this, 'commander');
 }
 Commander.prototype.aimPoint = function (o) {
   if (this.phase === 3) { o.x = this.pos.x + Math.sin(this.yaw) * 2.6; o.y = 3.2; o.z = this.pos.z + Math.cos(this.yaw) * 2.6; } else { o.x = this.pos.x; o.y = 3.4; o.z = this.pos.z; }
