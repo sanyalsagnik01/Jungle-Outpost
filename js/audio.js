@@ -8,7 +8,8 @@
 'use strict';
 var JO = window.JO;
 var A = JO.Audio = { ctx: null, muted: false, intensity: -1 };
-var ctx, master, sfx, music, amb, noiseBuf, droneGain, last = {};
+var ctx, master, sfx, music, amb, vox, noiseBuf, droneGain, last = {};
+var VOWELS = [730, 530, 390, 570, 440, 300, 640];
 
 A.init = function () {
   if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
@@ -17,6 +18,7 @@ A.init = function () {
   sfx = ctx.createGain(); sfx.gain.value = 0.9; sfx.connect(master);
   music = ctx.createGain(); music.gain.value = 0.42; music.connect(master);
   amb = ctx.createGain(); amb.gain.value = 0.0; amb.connect(master);
+  vox = ctx.createGain(); vox.gain.value = 1; vox.connect(master);
   var n = ctx.sampleRate * 2; noiseBuf = ctx.createBuffer(1, n, ctx.sampleRate);
   var d = noiseBuf.getChannelData(0); for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
   startAmbient(); startDrone();
@@ -96,6 +98,15 @@ A.play = function (name, vol) {
 };
 // short pitched blip: the stand-in for a voice line that has no audio file
 A.blip = function (f, dur, vol, delay) { if (!ctx || A.muted) return; try { tone({ f: f, f2: f * 0.92, dur: dur || 0.05, vol: 0.09 * (vol === undefined ? 1 : vol), type: 'square', delay: delay || 0 }); } catch (e) { /* never fatal */ } };
+// one synthesized syllable: a buzzy source through a vowel formant (or a headset band for radio speakers)
+A.syllable = function (pitch, vol, radio) {
+  if (!ctx || A.muted) return;
+  try { var t = ctx.currentTime, o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain(), d = 0.075 + Math.random() * 0.04;
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(pitch * (0.94 + Math.random() * 0.16), t); o.frequency.linearRampToValueAtTime(pitch * (0.86 + Math.random() * 0.2), t + d);
+    f.type = 'bandpass'; f.frequency.value = radio ? 1500 + Math.random() * 500 : VOWELS[(Math.random() * VOWELS.length) | 0] * (pitch > 180 ? 1.25 : 1); f.Q.value = radio ? 1.6 : 3.5;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3 * (vol === undefined ? 1 : vol), t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(f); f.connect(g); g.connect(vox); o.start(t); o.stop(t + d + 0.03); } catch (e) { /* never fatal */ }
+};
 // positional falloff relative to the player
 A.playAt = function (name, x, z, vol) {
   var P = JO.Player; if (!P) return A.play(name, vol);

@@ -10,7 +10,12 @@
     "hatColor": "#b3261a",
     "bg": "#2c4420"
    },
-   "voice": "steady, dry, male, 30s"
+   "voice": "steady, dry, male, 30s",
+   "blip": {
+    "pitch": 125,
+    "radio": 0
+   },
+   "cast": "Chad (wiy1Gg8ir59Wz8fJAOFD)"
   },
   "juno": {
    "name": "JUNO",
@@ -22,7 +27,12 @@
     "hatColor": "#23281c",
     "bg": "#5a3a10"
    },
-   "voice": "warm, sarcastic, female"
+   "voice": "warm, sarcastic, female",
+   "blip": {
+    "pitch": 215,
+    "radio": 1
+   },
+   "cast": "Moriana (ahuwlnygfGOZ2gufNQh7), played light and dry"
   },
   "brute": {
    "name": "THE BRUTE",
@@ -34,7 +44,12 @@
     "hatColor": "#6a7078",
     "bg": "#4a1410"
    },
-   "voice": "deep, gravelly"
+   "voice": "deep, gravelly",
+   "blip": {
+    "pitch": 72,
+    "radio": 0
+   },
+   "cast": "Harry - Fierce Warrior (SOYHLrjzK2X1ezoPC6cr)"
   },
   "phantom": {
    "name": "THE PHANTOM",
@@ -46,7 +61,12 @@
     "hatColor": "#3a2a55",
     "bg": "#1a2a33"
    },
-   "voice": "calm, whispery"
+   "voice": "calm, whispery",
+   "blip": {
+    "pitch": 150,
+    "radio": 0
+   },
+   "cast": "Callum - Husky Trickster (N2lVS1w4EtoT3dr4eOWO)"
   },
   "commander": {
    "name": "THE COMMANDER",
@@ -58,7 +78,12 @@
     "hatColor": "#363c33",
     "bg": "#3a2418"
    },
-   "voice": "commanding, weary"
+   "voice": "commanding, weary",
+   "blip": {
+    "pitch": 98,
+    "radio": 0
+   },
+   "cast": "jephthah voice (uLJQMZhREaVyMzh22S1d)"
   },
   "mira": {
    "name": "MIRA",
@@ -70,7 +95,12 @@
     "hatColor": "#2a1c14",
     "bg": "#22404a"
    },
-   "voice": "soft, determined"
+   "voice": "soft, determined",
+   "blip": {
+    "pitch": 245,
+    "radio": 0
+   },
+   "cast": "Andrea (jTAlT4VvvXlYNDrxqpNQ)"
   },
   "soldier_a": {
    "name": "SOLDIER",
@@ -82,7 +112,12 @@
     "hatColor": "#4a5528",
     "bg": "#2a2f22"
    },
-   "voice": "clipped, professional male"
+   "voice": "clipped, professional male",
+   "blip": {
+    "pitch": 140,
+    "radio": 0
+   },
+   "cast": "William Dwyer (BTGyeM5mXQG9spZ5F9uw)"
   },
   "soldier_b": {
    "name": "SOLDIER",
@@ -94,7 +129,12 @@
     "hatColor": "#6e5c38",
     "bg": "#2f2a22"
    },
-   "voice": "rough, excitable male"
+   "voice": "rough, excitable male",
+   "blip": {
+    "pitch": 118,
+    "radio": 0
+   },
+   "cast": "Samar (o7jrBY5t3RadnkTqEitx)"
   },
   "soldier_c": {
    "name": "SOLDIER",
@@ -106,7 +146,12 @@
     "hatColor": "#3c4658",
     "bg": "#22262f"
    },
-   "voice": "flat, tired male"
+   "voice": "flat, tired male",
+   "blip": {
+    "pitch": 104,
+    "radio": 0
+   },
+   "cast": "Alden - Tired Old Man (S9V0fuqWOqX0i8Kb8ctu)"
   }
  },
  "barkVoices": {
@@ -1344,5 +1389,6 @@
     "text": "Four legs, a shield, missiles, mortars and a laser. When the armour breaks, the core takes triple damage."
    }
   ]
- }
+ },
+ "voiceFiles": []
 }

@@ -1,0 +1,110 @@
+file	speaker	text
+l1_start_1.mp3	juno	Kade, it's Juno. You're on the ground and I'm at a safe altitude, which is my favourite kind.
+l1_start_2.mp3	juno	Mira's last ping came from the research outpost, three klicks north. Follow the trail.
+l1_start_3.mp3	kade	Copy. If my sister's out here, I'll find her.
+l1_cp1_1.mp3	juno	Checkpoint flag. Somebody left supplies. Don't ask who, just take them.
+l1_cp2_1.mp3	juno	Hold up. That's a camera in the mud. Kade... it's Mira's.
+l1_cp2_2.mp3	kade	Footage is half gone. But she's laughing. She's working with them.
+l1_cp2_3.mp3	juno	Maybe she had no choice. Maybe she did. Keep moving.
+l1_cp3_1.mp3	juno	Big heat signature past that wall of vines. I'd say knock, but he looks like the door.
+brute_intro_1.mp3	brute	Little engineer. The Commander said you would come. He did not say you would be so small.
+brute_intro_2.mp3	juno	That is a very large man with a very large gun. Use the pillars!
+brute_p2_1.mp3	brute	Enough! I will bury you in this dirt!
+brute_p2_2.mp3	juno	He's angry now. Jump the shockwaves!
+brute_stun_1.mp3	juno	He's dazed! The tank on his back, hit it now!
+brute_death_1.mp3	brute	The Bloom... keeps us... strong...
+brute_death_2.mp3	juno	The what now?
+l2_start_1.mp3	juno	Fog's thick, so I'm flying on instruments and spite. The outpost is past these ruins.
+l2_start_2.mp3	juno	The mercenaries here carry grenades and fly drones. I'd complain to their manager.
+l2_cp1_1.mp3	juno	The bridge is out. There's a patrol boat at the bank with a gun on it. I'm just saying.
+l2_cp2_1.mp3	juno	I've been reading the logs you found. The Bloom doesn't just glow, Kade. It gets into people's heads.
+l2_cp2_2.mp3	kade	And Mira's been growing it.
+l2_cp3_1.mp3	juno	Something's moving in the temple and my scope can't hold on to it. Careful.
+phantom_intro_1.mp3	phantom	You hear it too. The humming. It tells me you are a threat.
+phantom_intro_2.mp3	kade	You're a soldier. You have a name under all that.
+phantom_intro_3.mp3	phantom	I had... a name.
+phantom_intro_4.mp3	juno	Kade, his vitals read like a sleepwalker. He isn't choosing this. Maybe don't finish him.
+phantom_p2_1.mp3	phantom	It says... burn you out.
+phantom_p2_2.mp3	juno	Gas clouds and drones. Keep moving and stay out of the green.
+phantom_p3_1.mp3	juno	He's failing. Watch the red line, then get clear.
+phantom_beaten_1.mp3	juno	He's down. The humming is fading on my scope. Your call, Kade.
+phantom_spared_1.mp3	phantom	Sergeant... Elias Reyes. That is my name. I remember rain.
+phantom_spared_2.mp3	juno	Welcome back, Sergeant. Extraction's on me.
+phantom_death_1.mp3	phantom	Quiet... finally... quiet.
+phantom_death_2.mp3	juno	...Right. Moving on.
+l3_start_1.mp3	juno	Every soldier he has left is between you and that gate. No pressure.
+l3_start_2.mp3	kade	I didn't come this far to turn around.
+l3_cp1_1.mp3	juno	That gate's on a keypad. Find the terminal and I'll talk you through the hack.
+l3_cp2_1.mp3	juno	Halfway. For the record, I'm proud of you. Don't make it weird.
+l3_cp3_1.mp3	juno	Courtyard ahead. Something with four legs just powered up. I miss the large man.
+commander_intro_1.mp3	commander	Engineer. You think I am the villain of this valley.
+commander_intro_2.mp3	commander	The Bloom keeps men from tearing each other apart. I am guarding it from people far worse than me.
+commander_intro_3.mp3	kade	Then you won't mind if I ask my sister.
+commander_intro_4.mp3	commander	You will have to get past the walker.
+commander_p2_1.mp3	commander	Shield generator down. Impressive. Irrelevant.
+commander_p2_2.mp3	juno	Searchlight! Stay out of the beam or it rains mortars.
+commander_p3_1.mp3	commander	The core! Keep away from the core!
+commander_p3_2.mp3	juno	He said the quiet part out loud. Shoot the core!
+commander_death_1.mp3	commander	If it falls into their hands... remember that I tried to hold the line.
+mira_meet_1.mp3	mira	Kade? You came all this way.
+mira_meet_2.mp3	kade	You were working with him.
+mira_meet_3.mp3	mira	I was. The Bloom calms minds. It also keeps this whole valley alive. I thought I could choose which.
+mira_meet_4.mp3	mira	There is a kill switch, and there is a containment seal. I can't decide. You have to.
+mira_third_1.mp3	phantom	There's a third way. The river. I remember the river.
+mira_third_2.mp3	mira	Reyes? The water... it strips the spores and leaves the rest. Kade, he's right.
+first_rifleman_1.mp3	juno	Riflemen ahead. They like cover. You like them out of it.
+first_runner_1.mp3	juno	Machetes! They're fast and they're loud. Don't let them get close.
+first_sniper_1.mp3	juno	Red laser means a sniper is lining you up. Move when the dot stops moving.
+first_grenadier_1.mp3	juno	Grenadier! A red ring on the ground means leave.
+first_drone_1.mp3	juno	Scout drones. Fragile, annoying, a lot like my ex.
+first_shield_1.mp3	juno	Shield trooper! Bullets bounce off the front, so flank him or shoot the legs.
+low_health_1.mp3	juno	You're bleeding all over my rescue. Find cover and breathe.
+low_health_2.mp3	juno	Vitals are ugly, Kade. Get behind something solid.
+low_health_3.mp3	juno	Do not die. I already spent the advance.
+headshots_1.mp3	juno	Three for three. Show-off.
+headshots_2.mp3	juno	That's some shooting for a bridge builder.
+headshots_3.mp3	juno	Remind me never to play darts with you.
+near_miss_1.mp3	juno	That one parted your hair!
+near_miss_2.mp3	juno	Too close. Way too close.
+near_miss_3.mp3	juno	Nice dodge. Do that every time.
+kill_streak_1.mp3	juno	They're running out of soldiers faster than I'm running out of jokes.
+kill_streak_2.mp3	juno	Remind me to stay on your good side.
+player_dead_1.mp3	juno	Kade? Kade! ...Okay. Back to the last flag. Again.
+player_dead_2.mp3	juno	No, no, no. Up you get. The flag's still there.
+stealth_kill_1.mp3	juno	Quiet. I like quiet.
+stealth_kill_2.mp3	juno	He never heard a thing. Neither did I, and I was listening.
+intel_found_1.mp3	juno	Intel. I'll add it to the codex.
+intel_found_2.mp3	juno	Another log. Keep them coming.
+intel_found_3.mp3	juno	Got it. Reading while flying. Very safe.
+idol_found_1.mp3	juno	Is that a golden idol? Who hides those in a jungle? Besides everyone.
+boat_start_1.mp3	juno	You're on the gun. I'd say aim, but it has plenty of bullets.
+gate_hack_1.mp3	juno	Stay on the terminal. They will not like this.
+weather_rain_1.mp3	juno	Rain's coming in. They'll see less and hear less. So will you.
+bark_alert_a_1.mp3	soldier_a	Contact!
+bark_alert_a_2.mp3	soldier_a	Intruder on the trail!
+bark_alert_b_1.mp3	soldier_b	He's here!
+bark_alert_b_2.mp3	soldier_b	There! By the trees!
+bark_alert_c_1.mp3	soldier_c	Eyes on target.
+bark_hurt_a_1.mp3	soldier_a	I'm hit!
+bark_hurt_b_1.mp3	soldier_b	Agh! Medic!
+bark_hurt_c_1.mp3	soldier_c	Armour's holding!
+bark_ally_down_a_1.mp3	soldier_a	Man down!
+bark_ally_down_b_1.mp3	soldier_b	They got Ortiz!
+bark_throw_b_1.mp3	soldier_b	Frag out!
+bark_throw_b_2.mp3	soldier_b	Eat this!
+bark_retreat_a_1.mp3	soldier_a	Falling back!
+bark_retreat_a_2.mp3	soldier_a	Cover me!
+bark_charge_b_1.mp3	soldier_b	Cut him down!
+bark_charge_b_2.mp3	soldier_b	For the Bloom!
+bark_aim_a_1.mp3	soldier_a	Hold still...
+bark_aim_a_2.mp3	soldier_a	Got you in my sights.
+bark_idle_a_1.mp3	soldier_a	Three days of rain. Three.
+bark_idle_b_1.mp3	soldier_b	I didn't sign up to guard a flower.
+bark_idle_c_1.mp3	soldier_c	Quiet tonight. I hate quiet.
+bark_panic_a_1.mp3	soldier_a	He's a demon!
+bark_panic_b_1.mp3	soldier_b	I can't stop him!
+bark_search_a_1.mp3	soldier_a	Thought I heard something.
+bark_search_c_1.mp3	soldier_c	Check the bushes.
+end_destroy_juno.mp3	juno	You got her out. That was the job. The rest... we'll carry it. Juno out.
+end_preserve_juno.mp3	juno	She chose to stay, Kade. That's not losing her. Probably. Juno out.
+end_third_juno.mp3	juno	Everybody lives and the flower behaves. I didn't know we were allowed to win like that. Juno out.

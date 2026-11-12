@@ -48,17 +48,17 @@ function portrait(key) {
 
 /* ---------- dialogue ---------- */
 function stopAudio() { if (curAudio) { try { curAudio.pause(); } catch (e) { /* ignore */ } curAudio = null; } }
-function playVoice(line, vol, onEnd) {
+function playVoice(line, vol, onEnd, onErr) {
   if (!voices[line.id] || A.muted || St.voiceVol <= 0) return null;
-  try { var au = new Audio(line.voice); au.volume = Math.max(0, Math.min(1, vol * St.voiceVol)); if (onEnd) au.addEventListener('ended', onEnd);
+  try { var au = new Audio(line.voice); au.volume = Math.max(0, Math.min(1, vol * St.voiceVol)); if (onEnd) au.addEventListener('ended', onEnd); if (onErr) au.addEventListener('error', onErr);
     var p = au.play(); if (p && p.catch) p.catch(function () {}); return au; } catch (e) { return null; }
 }
 function show(line) {
   var sp = D.speakers[line.speaker] || { name: line.speaker.toUpperCase(), color: '#fff' };
-  St.cur = { line: line, t: 0, shown: 0, len: line.text.length, hold: 1.5 + line.text.length * 0.028, voiced: false, ended: false, blipT: 0, pitch: 300 + (line.speaker.charCodeAt(0) * 37 % 260) };
+  St.cur = { line: line, t: 0, shown: 0, len: line.text.length, hold: 1.5 + line.text.length * 0.028, voiced: false, ended: false, blipT: 0, blip: sp.blip || { pitch: 160, radio: 0 }, sylT: 0 };
   el.dlgName.textContent = sp.name; el.dlgName.style.color = sp.color; el.dlgPic.style.backgroundImage = 'url(' + portrait(line.speaker) + ')'; el.dlgPic.style.borderColor = sp.color;
   el.dlgText.textContent = ''; el.dlg.classList.remove('hidden');
-  stopAudio(); var c = St.cur; curAudio = playVoice(line, 1, function () { c.ended = true; }); c.voiced = !!curAudio;
+  stopAudio(); var c = St.cur; curAudio = playVoice(line, 1, function () { c.ended = true; }, function () { c.voiced = false; }); c.voiced = !!curAudio;
   if (A.play) A.play('radio', 0.5);
 }
 function next() { stopAudio(); St.cur = null; if (St.queue.length) show(St.queue.shift()); else el.dlg.classList.add('hidden'); }
@@ -83,7 +83,7 @@ St.update = function (dt) {
   clock += dt; var c = St.cur;
   if (c) { c.t += dt; var n = Math.min(c.len, (c.t * 45) | 0);
     if (n !== c.shown) { c.shown = n; el.dlgText.textContent = c.line.text.substr(0, n);
-      if (!c.voiced) { c.blipT -= 1; if (c.blipT <= 0) { c.blipT = 3; A.blip && A.blip(c.pitch * (0.9 + Math.random() * 0.25), 0.05); } } }
+      if (!c.voiced && c.t > c.sylT && /[aeiouy]/i.test(c.line.text.charAt(n - 1))) { c.sylT = c.t + 0.07; A.syllable(c.blip.pitch, St.voiceVol, c.blip.radio); } }
     var done = c.voiced ? (c.ended ? (c.endT = (c.endT || 0) + dt) > 0.35 : c.t > c.len / 45 + c.hold + 9) : c.t > c.len / 45 + c.hold;
     if (done) next(); }
   if (barkCur) { barkCur.t -= dt; if (barkCur.t <= 0) { el.bark.style.opacity = 0; barkCur = null; } }
@@ -97,7 +97,7 @@ St.bark = function (event, e) {
   var mine = ls.filter(function (l) { return l.speaker === sp; }); if (!mine.length) mine = ls;
   var P = JO.Player, d = Math.hypot(e.pos.x - P.pos.x, e.pos.z - P.pos.z); if (d > 45) return;
   var line = mine[(Math.random() * mine.length) | 0]; coolAt[key] = clock + (line.cooldown || 8); barkT = 2.2;
-  var vol = Math.max(0.15, 1 - d / 50); if (!playVoice(line, vol * 0.8) && A.blip) { A.blip(180 + Math.random() * 60, 0.09, vol * 0.5); A.blip(150 + Math.random() * 60, 0.09, vol * 0.5, 0.1); }
+  var vol = Math.max(0.15, 1 - d / 50); if (!playVoice(line, vol * 0.8)) { var bp = (D.speakers[sp] || {}).blip || { pitch: 130 }, ns = Math.min(5, 1 + (line.text.length / 6 | 0)); for (var q = 0; q < ns; q++) setTimeout(function () { A.syllable(bp.pitch, vol * 0.7 * St.voiceVol, 0); }, q * 95); }
   el.bark.textContent = 'SOLDIER: ' + line.text; el.bark.style.opacity = 1; barkCur = { t: 1.9 };
   UI().dmgNum(e.pos.x, e.pos.y + 2.3, e.pos.z, line.text, 'bark');
 };

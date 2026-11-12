@@ -202,8 +202,21 @@ story = {
   },
 }
 for e in story['endings'].values(): e['signoff']['voice'] = 'audio/voice/%s.mp3' % e['signoff']['id']
+# synthesized stand-in voice per speaker (used for any line that has no audio file): pitch in Hz, radio = band-limited like a headset
+BLIP = {'kade': (125, 0), 'juno': (215, 1), 'brute': (72, 0), 'phantom': (150, 0), 'commander': (98, 0), 'mira': (245, 0), 'soldier_a': (140, 0), 'soldier_b': (118, 0), 'soldier_c': (104, 0)}
+for k, v in BLIP.items(): story['speakers'][k]['blip'] = {'pitch': v[0], 'radio': v[1]}
+# suggested ElevenLabs casting (voice ids from the workspace voice list); used by whoever generates the files
+CAST = {'kade': 'Chad (wiy1Gg8ir59Wz8fJAOFD)', 'juno': 'Moriana (ahuwlnygfGOZ2gufNQh7), played light and dry', 'brute': 'Harry - Fierce Warrior (SOYHLrjzK2X1ezoPC6cr)', 'phantom': 'Callum - Husky Trickster (N2lVS1w4EtoT3dr4eOWO)',
+        'commander': 'jephthah voice (uLJQMZhREaVyMzh22S1d)', 'mira': 'Andrea (jTAlT4VvvXlYNDrxqpNQ)', 'soldier_a': 'William Dwyer (BTGyeM5mXQG9spZ5F9uw)', 'soldier_b': 'Samar (o7jrBY5t3RadnkTqEitx)', 'soldier_c': 'Alden - Tired Old Man (S9V0fuqWOqX0i8Kb8ctu)'}
+for k, v in CAST.items(): story['speakers'][k]['cast'] = v
+VDIR = os.path.join(ROOT, 'audio', 'voice'); os.makedirs(VDIR, exist_ok=True)
+allspoken = story['lines'] + [e['signoff'] for e in story['endings'].values()]
+story['voiceFiles'] = sorted(l['id'] for l in allspoken if os.path.exists(os.path.join(VDIR, l['id'] + '.mp3')))
+with open(os.path.join(VDIR, 'lines.tsv'), 'w', encoding='utf-8', newline='\n') as f:
+    f.write('file\tspeaker\ttext\n'); [f.write('%s.mp3\t%s\t%s\n' % (l['id'], l['speaker'], l['text'])) for l in allspoken]
 with open(os.path.join(ROOT, 'story.json'), 'w', encoding='utf-8', newline='\n') as f: json.dump(story, f, indent=1, ensure_ascii=False)
 with open(os.path.join(ROOT, 'js', 'story.data.js'), 'w', encoding='utf-8', newline='\n') as f:
     f.write('/* generated from story.json by tools/build_story.py - edit that script, not this file */\nwindow.JO_STORY = ' + json.dumps(story, ensure_ascii=False, separators=(',', ':')) + ';\n')
 spoken = len(story['lines']) + len(story['endings'])
+print('voice files present: %d of %d' % (len(story['voiceFiles']), len(allspoken)))
 print('story.json: %d lines (%d story, %d barks), %d cutscene panels, %d intel, %d chars spoken' % (spoken, len(L) + 3, len(B), sum(len(v) for v in story['cutscenes'].values()), len(story['intel']), sum(len(l['text']) for l in story['lines']) + sum(len(e['signoff']['text']) for e in story['endings'].values())))
