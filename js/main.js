@@ -3,12 +3,12 @@
    Game state machine, fixed-timestep loop, level flow
    (spawning, checkpoints, boss gate, destination flag),
    pickups, upgrades and screen wiring.
-   States: title | intro | playing | paused | dying | dead | done | win
+   States: title | intro | playing | paused | dying | dead | done | win | finale | bench
    ============================================================ */
 (function () {
 'use strict';
 var JO = window.JO, CFG = JO.CFG, W = JO.World, FX = JO.FX, A = JO.Audio, I = JO.Input, P = JO.Player, Wp = JO.Weapons, Cam = JO.Cam,
-  E = JO.Enemies, H = JO.Haz, B = JO.Bosses, UI = JO.UI, G = W.G, Ev = JO.Events, St = JO.Story;
+  E = JO.Enemies, H = JO.Haz, B = JO.Bosses, UI = JO.UI, G = W.G, Ev = JO.Events, St = JO.Story, S = JO.Save, Ar = JO.Arsenal, Pk = JO.Perks;
 var STEP = CFG.STEP;
 function newStats() { return { time: 0, kills: 0, shots: 0, hits: 0, dmgTaken: 0 }; }
 
@@ -61,6 +61,7 @@ Game.openCrate = function (c) {
   c.opened = true; A.play('checkpoint', 0.6); FX.burst(c.x, 1, c.z, 12, 0xffd060, 4, 0.5, 6, 0.14, 2);
   Game.spawnPickup('ammo', c.x - 1.1, c.z + 1.3); Game.spawnPickup(P.hp < P.maxHp * 0.7 ? 'health' : (P.armor < P.armorCap() ? 'armor' : 'health'), c.x + 1.1, c.z + 1.3);
   if (Math.random() < 0.5) Game.spawnPickup('armor', c.x, c.z + 2.1);
+  Ar.give('smoke', 1); Pk.addSalvage(CFG.SALVAGE.crate, c.x, 1.9, c.z);
 };
 Game.onKill = function (e) {
   Game.stats.kills++; Ev.emit('kill', e);
@@ -84,7 +85,34 @@ function setObjective() {
   Game.objective = Game.bossDead ? 'Objective: <b>Reach the flag</b>' : (Game.bossFight ? 'Objective: <b>Defeat ' + Game.boss.name + '</b>' : 'Objective: <b>Reach the flag</b> — push north');
 }
 Game.setDifficulty = function (d) { Game.diff = d; Game.diffCfg = CFG.DIFF[d]; };
-Game.startRun = function (idx) { P.resetRun(); Wp.resetRun(); Game.total = newStats(); Game.ending = ''; Game.run = { intel: {}, idols: {}, mercy: 0, spared: false, knockouts: 0 }; Game.loadLevel(idx || 0); };
+function newRun() { return { intel: {}, idols: {}, mercy: 0, spared: false, knockouts: 0, salvage: 0, deaths: 0, alerts: 0, takedowns: 0 }; }
+Game.startRun = function (idx) { Game.resume = null; P.resetRun(); Wp.resetRun(); Game.total = newStats(); Game.ending = ''; Game.run = newRun(); Game.loadLevel(idx || 0); };
+
+/* ---------- saved run: written at every checkpoint, read by CONTINUE ---------- */
+Game.saveRun = function (cpIdx) {
+  if (Game.mode || Game.debug.noSave) return;
+  S.profile.run = { v: 1, level: Game.levelIdx, cp: cpIdx, diff: Game.diff, up: P.up, maxPlates: P.maxPlates, armor: P.armor,
+    w: Wp.snapshot(), nades: Ar.snapshot(), run: Game.run, total: Game.total, stats: Game.stats };
+  S.save();
+};
+Game.hasSave = function () { var r = S.profile.run; return !!(r && r.v === 1 && CFG.LEVELS[r.level]); };
+Game.continueRun = function () {
+  if (!Game.hasSave()) return Game.startRun(0);
+  var r = JSON.parse(JSON.stringify(S.profile.run)), k, base = newRun(), ns = newStats();
+  Game.setDifficulty(CFG.DIFF[r.diff] ? r.diff : 'normal'); P.resetRun(); Wp.resetRun();
+  for (k in P.up) P.up[k] = (r.up && r.up[k]) | 0;
+  P.maxHp = Math.round(CFG.PLAYER.hp * (1 + 0.25 * P.up.hp)); P.maxPlates = Math.max(1, r.maxPlates | 0);
+  for (k in base) if (r.run && r.run[k] !== undefined) base[k] = r.run[k]; Game.run = base;
+  for (k in ns) if (r.total && r.total[k] !== undefined) ns[k] = +r.total[k] || 0; Game.total = ns;
+  Game.ending = ''; Game.noCut = true; Game.resume = r; Game.loadLevel(r.level);
+};
+function applyResume(r) {
+  var k, ns = newStats(); for (k in ns) if (r.stats && r.stats[k] !== undefined) ns[k] = +r.stats[k] || 0; Game.stats = ns;
+  Wp.load(r.w); Ar.restore(r.nades); P.armor = Math.min(P.armorCap(), +r.armor || 0);
+  var cp = r.cp >= 0 ? W.checkpoints[r.cp] : null; if (!cp) return;
+  for (k = 0; k <= r.cp; k++) W.setCheckpointReached(W.checkpoints[k]);
+  P.place(0, cp.z + 1.5); snap = takeSnap(0, cp.z + 1.5, cp.z); buildPending(cp.z);
+}
 Game.loadLevel = function (idx) {
   Game.levelIdx = idx; var L = CFG.LEVELS[idx];
   E.reset(); H.reset(); FX.reset(); clearPickups(); UI.clearFloat(); I.clear();
@@ -95,11 +123,19 @@ Game.loadLevel = function (idx) {
   buildPending(1e9); (L.pickups || []).forEach(function (p) { Game.spawnPickup(p[0], p[1], p[2]); });
   Game.boss = B.create(L.boss);
   levelSnap = snap = takeSnap(0, 3, 1e9);
+  if (Game.resume) { applyResume(Game.resume); Game.resume = null; }
   setObjective(); UI.setLevelHeader(L); UI.bossBar(null); UI.hud(false);
-  Game.state = 'intro'; I.exitLock(); A.setIntensity(-1); UI.refreshTouch(); bossSeen = false; Ev.emit('level_load', idx);
+  Game.state = 'intro'; I.exitLock(); A.setIntensity(-1); UI.refreshTouch(); bossSeen = false; Ev.emit('level_load', idx); Game.saveRun(snap.cpZ > 1e8 ? -1 : cpIndex(snap.cpZ));
   var brief = function () { UI.showIntro(L, unlock); };
   if (Game.noCut) { Game.noCut = false; brief(); } else { UI.show(null); St.cutscene('l' + (idx + 1) + '_open', brief); }
   Cam.compute(1, 0);
+};
+function cpIndex(z) { for (var i = 0; i < W.checkpoints.length; i++) if (W.checkpoints[i].z === z) return i; return -1; }
+// the field bench: open at any checkpoint flag you have reached
+Game.nearBench = function () { for (var i = 0; i < W.checkpoints.length; i++) { var cp = W.checkpoints[i]; if (cp.reached && Math.abs(P.pos.z - cp.z) < 7 && Math.abs(P.pos.x - (cp.x || 0)) < 9) return true; } return false; };
+Game.openBench = function () {
+  if (Game.state !== 'playing') return; Game.state = 'bench'; St.pause(true); I.exitLock(); I.clear(); A.setIntensity(-1); UI.refreshTouch();
+  Pk.open(function () { St.pause(false); Game.saveRun(cpIndex(snap.cpZ)); Game.beginPlay(); });
 };
 Game.beginPlay = function () {
   A.init(); A.setAmbient(true); A.setIntensity(Game.bossFight ? 1 : 0);
@@ -110,9 +146,9 @@ Game.pause = function () {
   else if (Game.state === 'paused') { St.pause(false); Game.beginPlay(); }
 };
 Game.toTitle = function () {
-  St.reset(); St.pause(false); Game.state = 'title'; UI.hud(false); UI.show('scrTitle'); I.exitLock(); A.setIntensity(-1); A.setAmbient(false); A.setDrone(0); P.model.g.visible = false; UI.refreshTouch();
+  St.reset(); St.pause(false); Game.state = 'title'; UI.hud(false); UI.refreshTitle(); UI.show('scrTitle'); I.exitLock(); A.setIntensity(-1); A.setAmbient(false); A.setDrone(0); P.model.g.visible = false; UI.refreshTouch();
 };
-Game.onPlayerDead = function () { Ev.emit('player_dead'); Game.state = 'dying'; deadT = 1.5; Game.timescale = 1; slowT = 0; };
+Game.onPlayerDead = function () { Game.run.deaths = (Game.run.deaths || 0) + 1; Ev.emit('player_dead'); Game.state = 'dying'; deadT = 1.5; Game.timescale = 1; slowT = 0; };
 Game.retryCheckpoint = function () {
   St.clear(); St.endCine(); Ev.emit('retry'); E.reset(); H.reset(); FX.reset(); UI.clearFloat(); I.clear();
   Wp.restore(snap.w); P.armor = snap.armor; P.hp = P.maxHp; P.place(snap.x, snap.z); P.invuln = 2;      // brief spawn protection
@@ -142,7 +178,7 @@ function completeLevel() {
   I.exitLock(); I.clear(); UI.hud(false); A.play('win'); A.setIntensity(-1); A.setDrone(0);
   var L = CFG.LEVELS[Game.levelIdx];
   St.clear(); Ev.emit('level_complete', Game.levelIdx);
-  if (Game.levelIdx >= CFG.LEVELS.length - 1) { Game.state = 'win'; UI.showWin(t, Game.ending, Game.run); UI.refreshTouch(); return; }
+  if (Game.levelIdx >= CFG.LEVELS.length - 1) { if (!Game.mode) { S.profile.run = null; S.save(); } Game.state = 'win'; UI.showWin(t, Game.ending, Game.run); UI.refreshTouch(); return; }
   Game.state = 'done'; UI.refreshTouch();
   var pool = CFG.UPGRADES.slice(), choices = [];
   while (choices.length < 3) choices.push(pool.splice((Math.random() * pool.length) | 0, 1)[0]);
@@ -165,20 +201,21 @@ function step(dt) {
   if (spawnT <= 0 && !Game.bossFight && !Game.bossDead) { spawnT = 0.15; var n = E.count();
     for (var i = 0; i < pending.length && n < CFG.MAX_ACTIVE; i++) { var s = pending[i]; if (P.pos.z > s.trig) continue;
       E.spawn(s.type, s.x, s.z, s.type === 'sniper' ? { y: 4.88, alt: s.alt } : null); pending.splice(i, 1); i--; n++; } }
-  E.update(dt); H.update(dt); FX.updateBullets(dt); updatePickups(dt); JO.Codex.update(dt);
+  E.update(dt); H.update(dt); Ar.update(dt); FX.updateBullets(dt); updatePickups(dt); JO.Codex.update(dt);
   if (P.dead) { I.endStep(); return; }
 
   for (var c = 0; c < W.checkpoints.length; c++) { var cp = W.checkpoints[c]; if (cp.reached || P.pos.z > cp.z) continue;
     W.setCheckpointReached(cp); P.hp = Math.min(P.maxHp, P.hp + CFG.PLAYER.checkpointHeal);
     if (Wp.slots[0].reserve < CFG.PLAYER.checkpointAmmo) Wp.slots[0].reserve = CFG.PLAYER.checkpointAmmo;      // flags double as a rifle resupply
     snap = takeSnap(0, cp.z + 1.5, cp.z);
-    A.play('checkpoint'); UI.banner('CHECKPOINT — HEALED AND RESUPPLIED', 2.2, false); Ev.emit('checkpoint', Game.levelIdx, c); }
+    A.play('checkpoint'); UI.banner('CHECKPOINT — HEALED AND RESUPPLIED', 2.2, false); Ev.emit('checkpoint', Game.levelIdx, c); Game.saveRun(c); }
+  if (!Game.bossFight && !Game.hint && E.count() === 0 && Game.nearBench()) { Game.hint = I.isTouch ? 'TAP <kbd>BENCH</kbd> — SKILLS AND WEAPON MODS' : 'PRESS <kbd>B</kbd> — FIELD BENCH: SKILLS AND WEAPON MODS'; Game.benchHere = true; if (I.benchPressed) { I.endStep(); Game.openBench(); return; } } else Game.benchHere = false;
   if (!Game.bossFight && !Game.bossDead && P.pos.z < W.A0 - 5) startBoss();
   if (Game.bossDead && Math.hypot(P.pos.x - W.flag.x, P.pos.z - W.flag.z) < (JO.Finale.mira ? 4.2 : 2.8)) { if (JO.Finale.mira) JO.Finale.begin(); else completeLevel(); I.endStep(); return; }
 
   // boss-arena safety net so nobody is soft-locked without ammo or health
   if (Game.bossFight && !Game.bossDying) { supplyT -= dt;
-    var ammo = 0; for (var k = 0; k < 3; k++) if (Wp.slots[k].unlocked) ammo += Wp.slots[k].mag + Wp.slots[k].reserve;
+    var ammo = 0; for (var k = 0; k < Wp.slots.length; k++) if (Wp.slots[k].unlocked) ammo += Wp.slots[k].mag + Wp.slots[k].reserve;
     if (ammo < 20 && supplyT > 3) supplyT = 3;
     if (supplyT <= 0) { supplyT = 15; var need = Wp.slots[0].reserve < 80 ? 'ammo' : (P.hp < P.maxHp * 0.5 ? 'health' : null);
       if (need) { var a = Math.random() * 6.28, x = Math.max(-22, Math.min(22, P.pos.x + Math.cos(a) * 7)), z = Math.max(W.A1 + 4, Math.min(W.A0 - 4, P.pos.z + Math.sin(a) * 7));
@@ -248,7 +285,7 @@ Game.toggleDebug = function (on) {
 function bind(id, fn) { document.getElementById(id).addEventListener('click', function (e) { A.init(); A.play('ui'); fn(e); }); }
 Game.init = function () {
   var canvas = document.getElementById('game');
-  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas); St.init(); JO.Codex.init(W.scene); JO.Finale.init(W.scene);
+  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas); St.init(); Pk.init(); Ar.init(W.scene); JO.Codex.init(W.scene); JO.Finale.init(W.scene);
   FX.pMat.uniforms.uScale.value = window.innerHeight;
   W.build(CFG.LEVELS[0]); P.model.g.visible = false;                       // title backdrop
   // models load behind the title screen; whatever fails simply stays primitive
@@ -270,7 +307,11 @@ Game.init = function () {
   window.addEventListener('resize', function () { W.resize(); FX.pMat.uniforms.uScale.value = window.innerHeight; });
   document.addEventListener('visibilitychange', function () { if (document.hidden && Game.state === 'playing') Game.pause(); });
 
-  bind('btnStart', function () { Game.startRun(0); });
+  bind('btnStart', function () { Game.mode = ''; Game.startRun(0); });
+  bind('btnContinue', function () { Game.mode = ''; Game.continueRun(); });
+  bind('btnBench', function () { Pk.open(function () { UI.refreshTitle(); UI.show('scrTitle'); }); });
+  bind('btnDoneBench', function () { Pk.open(function () { UI.show('scrDone'); }); });
+  UI.refreshTitle();
   bind('btnControls', function () { UI.show('scrControls'); });
   bind('btnCodex', function () { JO.Codex.open('scrTitle'); }); bind('btnPauseCodex', function () { JO.Codex.open('scrPause'); });
   I.onCodex = function () { if (Game.state === 'playing') { togglePause(); if (Game.state === 'paused') JO.Codex.open('scrPause'); } };
@@ -279,7 +320,7 @@ Game.init = function () {
   bind('btnResume', function () { pauseAt = performance.now(); Game.pause(); });
   bind('btnPauseRestart', Game.restartLevel); bind('btnPauseQuit', Game.toTitle);
   bind('btnRetry', Game.retryCheckpoint); bind('btnRestart', Game.restartLevel); bind('btnQuit', Game.toTitle);
-  bind('btnAgain', function () { Game.startRun(0); });
+  bind('btnAgain', function () { Game.toTitle(); });
   document.getElementById('btnMute').addEventListener('click', function () { A.init(); I.onMute(); });
   document.getElementById('btnPause').addEventListener('click', function () { I.onPause(); });
   var drow = document.getElementById('diffRow');
@@ -293,7 +334,7 @@ Game.init = function () {
    Drives the normal input state so every level can be smoke-
    tested end to end. Never active in normal play.
    ============================================================ */
-var AP = { x: 0, y: 0, z: 0 }, TP = { x: 0, y: 0, z: 0 }, botT = 0, rollT = 2, stuckT = 0, lastX = 0, lastZ = 0, sideT = 0, sideDir = 1;
+var AP = { x: 0, y: 0, z: 0 }, TP = { x: 0, y: 0, z: 0 }, botT = 0, botNade = 3, rollT = 2, stuckT = 0, lastX = 0, lastZ = 0, sideT = 0, sideDir = 1;
 function bot(dt) {
   I.external = true; botT += dt; rollT -= dt;
   var best = null, bd = 1e9, L = E.list, i, hx = P.pos.x, hy = P.pos.y + 1.5, hz = P.pos.z, d, dx, dy, dz;
@@ -317,6 +358,7 @@ function bot(dt) {
     if (best.isBoss && best.kind === 'brute' && best.state === 'stun') { gx = best.pos.x - Math.sin(best.yaw) * 6; gz = best.pos.z - Math.cos(best.yaw) * 6; steer(gx, gz, 1); }
     else if (d < (best.isBoss ? 13 : 7)) I.moveY = -1; else if (d > 26 && best.type !== 'sniper') I.moveY = 0.7;
     if (rollT <= 0 && P.stamina > 45) { rollT = (sk < 0.7 ? 5 : 2.4) + Math.random(); I.rollPressed = true; }
+    botNade -= dt; if (botNade <= 0 && d > 9 && d < 24 && !best.isBoss && best.type !== 'drone' && best.type !== 'sniper' && E.count() >= 2) { botNade = 7; if (Ar.count.frag > 0) I.nadePressed = true; else if (Ar.count.smoke > 0) I.smokePressed = true; }
   } else {
     if (Game.bossDead) { gx = W.flag.x; gz = W.flag.z; } else if (Game.bossFight && Game.boss.state === 'beaten') { gx = Game.boss.pos.x; gz = Game.boss.pos.z; if (Game.debug.finish) I.meleePressed = true; else if (Game.boss.dist < 6) I.interactPressed = true; } else if (Game.bossFight) { gx = Math.sin(botT) * 12; gz = W.AC + Math.cos(botT) * 12; } else { gx = 0; gz = P.pos.z - 12; }
     P.pitch = -0.05; P.yaw = Math.atan2(gx - P.pos.x, gz - P.pos.z); I.moveY = 1; I.sprint = true;

@@ -18,7 +18,7 @@ function scale(id, k) { k = Math.max(0, Math.min(1, k)); var key = id + 's', r =
 function cls(node, name, on) { var key = node.id + '.' + name; if (cache[key] !== on) { cache[key] = on; node.classList.toggle(name, on); } }
 
 UI.init = function () {
-  ['hud', 'hudLevel', 'hudObj', 'hudKills', 'hpFill', 'hpTxt', 'arFill', 'arTxt', 'stFill', 'wName', 'wAmmo', 's1', 's2', 's3', 'bossWrap', 'bossName', 'bossFill', 'bossPhase', 'bossBar',
+  ['hud', 'hudLevel', 'hudObj', 'hudKills', 'hpFill', 'hpTxt', 'arFill', 'arTxt', 'stFill', 'wName', 'wAmmo', 's1', 's2', 's3', 's4', 's5', 'hudNades', 'hudSalvage', 'bossWrap', 'bossName', 'bossFill', 'bossPhase', 'bossBar',
     'banner', 'prompt', 'reloadTxt', 'cross', 'hitm', 'vignette', 'lowhp', 'inds', 'dnums', 'touch', 'btnPause', 'btnMute', 'tUse'].forEach(function (id) { el[id] = $(id); });
   var i, d, scr = document.querySelectorAll('.screen[id^=scr]'); for (i = 0; i < scr.length; i++) SCREENS.push(scr[i].id);
   el.toasts = $('toasts');
@@ -42,6 +42,10 @@ UI.refreshTouch = function () {
   var playing = JO.Game && JO.Game.state === 'playing';
   el.touch.classList.toggle('hidden', !(JO.Input.isTouch && playing)); el.btnPause.classList.toggle('hidden', !(JO.Input.isTouch && playing));
 };
+// title buttons depend on whether a saved run exists
+UI.refreshTitle = function () { var has = JO.Game && JO.Game.hasSave && JO.Game.hasSave(), r = JO.Save.profile.run;
+  $('btnContinue').classList.toggle('hidden', !has); $('btnStart').textContent = has ? 'NEW GAME' : 'START MISSION';
+  if (has) $('btnContinue').textContent = 'CONTINUE — ' + CFG.LEVELS[r.level].name + (r.cp >= 0 ? ', CHECKPOINT ' + (r.cp + 1) : ''); };
 UI.setMute = function (m) { el.btnMute.style.opacity = m ? 0.4 : 1; el.btnMute.innerHTML = m ? '&#215;' : '&#9835;'; };
 
 UI.banner = function (msg, dur, red) { el.banner.textContent = msg; el.banner.classList.toggle('red', !!red); el.banner.style.opacity = 1; bannerT = dur || 2; };
@@ -78,13 +82,14 @@ UI.update = function (dt, camera) {
   scale('stFill', P.stamina / CFG.PLAYER.stamina);
   var s = Wp.current(); set('wName', s.cfg.name);
   var ammo = s.mag + ' / ' + s.reserve; if (cache.ammo !== ammo) { cache.ammo = ammo; el.wAmmo.innerHTML = s.mag + ' <small>/ ' + s.reserve + '</small>'; el.wAmmo.style.color = s.mag <= Math.ceil(Wp.magSize(Wp.cur) * 0.2) ? '#ff5a3c' : ''; }
-  for (i = 0; i < 3; i++) { var n = el['s' + (i + 1)]; cls(n, 'on', Wp.cur === i); cls(n, 'lock', !Wp.slots[i].unlocked); }
+  for (i = 0; i < Wp.slots.length; i++) { var n = el['s' + (i + 1)]; if (!n) continue; cls(n, 'on', Wp.cur === i); cls(n, 'lock', !Wp.slots[i].unlocked); }
+  var Ar = JO.Arsenal; set('hudNades', (I.isTouch ? '' : 'G ') + 'FRAG ' + Ar.count.frag + '   ' + (I.isTouch ? '' : 'Q ') + 'SMOKE ' + Ar.count.smoke); set('hudSalvage', 'SALVAGE ' + JO.Save.profile.salvage);
   cls(el.reloadTxt, 'hidden', !(Wp.reloading > 0));
   var obj = Gm.objective; if (cache.obj !== obj) { cache.obj = obj; el.hudObj.innerHTML = obj; }
   if (Gm.boss && Gm.bossFight) { scale('bossFill', Gm.boss.hp / Gm.boss.maxHp);
     set('bossPhase', Gm.boss.kind === 'commander' && Gm.boss.shieldUp() ? 'SHIELD ACTIVE — WAIT FOR THE MISSILE VOLLEY' : (Gm.boss.phase >= Gm.boss.phases && Gm.boss.phases === 3 && Gm.boss.kind === 'phantom' ? 'FINAL STAGE' : 'PHASE ' + Gm.boss.phase)); }
   var pr = Gm.hint || (P.nearCrate ? (I.isTouch ? 'TAP <kbd>USE</kbd> TO OPEN SUPPLY CRATE' : 'PRESS <kbd>E</kbd> TO OPEN SUPPLY CRATE') : '');
-  if (cache.prompt !== pr) { cache.prompt = pr; el.prompt.innerHTML = pr; el.prompt.classList.toggle('hidden', !pr); el.tUse.classList.toggle('hidden', !pr); }
+  if (cache.prompt !== pr) { cache.prompt = pr; el.prompt.innerHTML = pr; el.prompt.classList.toggle('hidden', !pr); el.tUse.classList.toggle('hidden', !pr || !!Gm.benchHere); $('tBench').classList.toggle('hidden', !Gm.benchHere); }
 
   // crosshair spread
   var sp = (I.ads ? s.cfg.adsSpread : s.cfg.spread) + Wp.bloom, gap = 4 + sp * (I.ads ? 6 : 3.4); crossGap += (gap - crossGap) * Math.min(1, dt * 18);
@@ -116,12 +121,12 @@ function statBlock(node, st) {
 UI.setLevelHeader = function (L) { cache.hudLevel = null; set('hudLevel', L.sub + ' — ' + L.name); };
 UI.showIntro = function (L, unlock) {
   $('introSub').textContent = L.sub; $('introName').textContent = L.name; $('introStory').textContent = L.story;
-  $('introUnlock').textContent = unlock ? 'NEW WEAPON UNLOCKED: ' + unlock.cfg.name + '  [' + (unlock.idx + 1) + ']' : '';
+  $('introUnlock').textContent = unlock ? 'NEW: ' + unlock.map(function (u) { return u.cfg.name + ' [' + (u.idx + 1) + ']'; }).join(' + ') : '';
   UI.show('scrIntro');
 };
 UI.showDone = function (L, st, choices, onPick) {
   $('doneSub').textContent = L.sub + ' — ' + L.name; statBlock($('doneStats'), st);
-  var cc = JO.Codex.levelCount(JO.Game.levelIdx); $('doneFound').textContent = 'INTEL ' + cc.intel + ' / 4   ·   IDOL ' + cc.idol + ' / 1';
+  var cc = JO.Codex.levelCount(JO.Game.levelIdx); $('doneFound').textContent = 'INTEL ' + cc.intel + ' / 4   ·   IDOL ' + cc.idol + ' / 1   ·   SALVAGE ' + JO.Save.profile.salvage;
   var wrap = $('upCards'); wrap.innerHTML = '';
   choices.forEach(function (u) { var b = document.createElement('button'); b.className = 'card'; b.innerHTML = '<b>' + u.name + '</b><small>' + u.desc + '</small>';
     b.addEventListener('click', function () { onPick(u.id); }); wrap.appendChild(b); });

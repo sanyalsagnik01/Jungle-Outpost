@@ -8,7 +8,7 @@
 (function () {
 'use strict';
 var JO = window.JO, CFG = JO.CFG, W = JO.World, FX = JO.FX, A = JO.Audio, M = JO.Models, H = JO.Haz, G = W.G;
-var E = JO.Enemies = { list: [], pools: {}, scene: null, baseEmis: 0 };   // baseEmis: faint self-light so enemies read at night
+var E = JO.Enemies = { list: [], pools: {}, scene: null, baseEmis: 0, sightK: 1 };   // baseEmis: faint self-light so enemies read at night
 var DEG = Math.PI / 180, R = { dealt: 0, blocked: false, head: false, crit: false, killed: false, silent: false };
 E.R = R;
 
@@ -23,7 +23,8 @@ E.turnToward = turnToward; E.wrap = wrap;
 function facePlayer(e, dt, rate) { e.yaw = turnToward(e.yaw, Math.atan2(e.ndx, e.ndz), rate * dt); }
 function los(e) {
   var P = JO.Player, ox = e.pos.x, oy = e.pos.y + e.eye, oz = e.pos.z, dx = P.pos.x - ox, dy = P.pos.y + 1.1 - oy, dz = P.pos.z - oz;
-  var d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1; return W.raycast(ox, oy, oz, dx / d, dy / d, dz / d, d) >= d - 0.02;
+  var d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1; if (JO.Arsenal.blocked(ox, oz, P.pos.x, P.pos.z)) return false;
+  return W.raycast(ox, oy, oz, dx / d, dy / d, dz / d, d) >= d - 0.02;
 }
 E.los = los;
 // steering move with stuck detection (side-steps around whatever blocks the way)
@@ -110,7 +111,7 @@ EP.spawn = function (x, z, o) {
   this.dist = 99; this.ndx = 0; this.ndz = 1; this.walk = 0; this.moving = false; this.avoidT = 0; this.avoidSide = 1; this.stuckT = 0; this.flash = 0; this.tint = 0;
   this.retreated = false; this.noSeeT = 0; this.deadT = 0; this.vy = 0; this.patDir = Math.random() < 0.5 ? -1 : 1; this.shieldOpen = false;
   this.ang = Math.random() * 6.28; this.ph = Math.random() * 6.28; this.orbitDir = Math.random() < 0.5 ? -1 : 1; this.atk = 0; this.hitDone = false; this.blindT = 0;
-  this.alt = o.alt || null; this.perchY = o.y || 0; this.tx = x; this.tz = z; this.summoned = !!o.summoned;
+  this.alt = o.alt || null; this.perchY = o.y || 0; this.tx = x; this.tz = z; this.summoned = !!o.summoned; this.burnT = 0; this.burnTick = 0;
   if (this.type === 'drone') this.pos.y = 4;
   for (var i = 0; i < this.mats.length; i++) { var m = this.mats[i]; m.transparent = false; m.opacity = 1; m.emissive.setHex(0); m.needsUpdate = true; }
   this.emis = 0; this.mesh.visible = true; this.mesh.rotation.set(0, this.yaw, 0); this.mesh.position.copy(this.pos); this.mesh.scale.setScalar(1);
@@ -171,11 +172,11 @@ EP.update = function (dt) {
   if (!this.alive) { this.deadUpdate(dt); return; }
   var P = JO.Player; this.t += dt;
   var dx = P.pos.x - this.pos.x, dz = P.pos.z - this.pos.z; this.dist = Math.hypot(dx, dz) || 0.001; this.ndx = dx / this.dist; this.ndz = dz / this.dist;
-  this.losT -= dt; if (this.losT <= 0) { this.losT = 0.2 + Math.random() * 0.1; this.see = !P.dead && this.dist < this.cfg.sight * 1.25 && los(this); }
+  this.losT -= dt; if (this.losT <= 0) { this.losT = 0.2 + Math.random() * 0.1; this.see = !P.dead && this.dist < this.cfg.sight * 1.25 * E.sightK && los(this); }
   if (this.see) this.seenT = 0; else this.seenT += dt;
-  this.moving = false; this.tint = 0;
+  this.moving = false; this.tint = this.burnT > 0 ? 0x802000 : 0;
   if (P.dead) { this.hideLaser(); }
-  else if (this.state === 'patrol') { patrol(this, dt); if (this.alerted || (this.see && this.dist < this.cfg.sight) || this.dist < 6.5) this.setAlert(); }
+  else if (this.state === 'patrol') { patrol(this, dt); if (this.alerted || (this.see && this.dist < this.cfg.sight * E.sightK) || this.dist < 6.5 * E.sightK) this.setAlert(); }
   else if (this.state === 'alert') { facePlayer(this, dt, 7); this.stateT -= dt;
     if (this.stateT <= 0) { this.state = 'attack'; this.sub = ''; if (this.type === 'rifleman') { pickCover(this, false, false); this.sub = 'move'; this.stateT = 4; }
       if (this.type === 'sniper') { this.sub = 'cool'; this.cd = 0.5 + Math.random(); } } }
@@ -384,6 +385,7 @@ E.alertNear = function (x, z, r) {
 
 E.update = function (dt) {
   var L = E.list, i, j, a, b, P = JO.Player, near = 0;
+  E.sightK = JO.Perks.sight() * (JO.Stealth ? JO.Stealth.sightK() : 1);
   for (i = L.length - 1; i >= 0; i--) L[i].update(dt);
   for (i = 0; i < L.length; i++) { a = L[i]; if (!a.alive || a.isBoss) continue;
     if (a.type === 'drone') { var dd = Math.hypot(a.pos.x - P.pos.x, a.pos.y - P.pos.y, a.pos.z - P.pos.z), v = 1 - dd / 30; if (v > near) near = v; continue; }

@@ -29,12 +29,56 @@ JO.CFG = {
   // falloff: [fullDamageUntil, zeroPoint, minimumFraction]
   WEAPONS: [
     { id: 'ar', name: 'ASSAULT RIFLE', short: 'AR', dmg: 14, pellets: 1, interval: 0.105, mag: 30, reserve: 210, maxReserve: 300,
-      reload: 1.7, spread: 1.5, adsSpread: 0.45, bloom: 0.2, range: 140, headMult: 2, recoil: 0.0055, unlockLevel: 0, pickup: 60 },
+      reload: 1.7, spread: 1.5, adsSpread: 0.45, bloom: 0.2, range: 140, headMult: 2, recoil: 0.0055, unlockLevel: 0, pickup: 60, noise: 38 },
     { id: 'sg', name: 'SHOTGUN', short: 'SG', dmg: 10, pellets: 8, interval: 0.78, mag: 6, reserve: 24, maxReserve: 42,
-      reload: 2.1, spread: 5.2, adsSpread: 3.4, bloom: 0, range: 50, headMult: 2, recoil: 0.03, unlockLevel: 1, pickup: 6,
+      reload: 2.1, spread: 5.2, adsSpread: 3.4, bloom: 0, range: 50, headMult: 2, recoil: 0.03, unlockLevel: 1, pickup: 6, noise: 44,
       falloff: [7, 26, 0.2] },
     { id: 'mr', name: 'MARKSMAN RIFLE', short: 'MR', dmg: 72, pellets: 1, interval: 0.6, mag: 8, reserve: 32, maxReserve: 48,
-      reload: 2.3, spread: 1.3, adsSpread: 0.04, bloom: 0, range: 240, headMult: 3, recoil: 0.022, unlockLevel: 2, pickup: 6 }
+      reload: 2.3, spread: 1.3, adsSpread: 0.04, bloom: 0, range: 240, headMult: 3, recoil: 0.022, unlockLevel: 2, pickup: 6, noise: 50 },
+    // kind 'bolt': silent single shot. kind 'flame': short cone, sets enemies burning (see arsenal.js)
+    { id: 'xb', name: 'CROSSBOW', short: 'XB', kind: 'bolt', dmg: 95, pellets: 1, interval: 0.5, mag: 1, reserve: 14, maxReserve: 20,
+      reload: 1.25, spread: 0.6, adsSpread: 0.05, bloom: 0, range: 120, headMult: 2.5, recoil: 0.012, unlockLevel: 0, pickup: 3, noise: 3 },
+    { id: 'ft', name: 'FLAMETHROWER', short: 'FT', kind: 'flame', dmg: 7, pellets: 1, interval: 0.06, mag: 100, reserve: 100, maxReserve: 200,
+      reload: 2.6, spread: 4, adsSpread: 3, bloom: 0, range: 9.5, headMult: 1, recoil: 0, unlockLevel: 1, pickup: 35, noise: 16, cone: 0.34 }
+  ],
+
+  // thrown by the player (G = frag, Q = smoke). burn is what the flamethrower leaves behind.
+  GRENADE: {
+    frag:  { start: 2, max: 3, fuse: 1.7, radius: 5.5, dmg: 150, self: 0.3 },
+    smoke: { start: 1, max: 2, radius: 5.2, dur: 9 },
+    burn: 3.2, burnDps: 14, throwSpeed: 17, throwUp: 5.5
+  },
+
+  // salvage: the bench currency. Dropped by kills, crates, idols and bosses; kept in the save profile.
+  SALVAGE: { rifleman: 6, runner: 4, sniper: 9, grenadier: 9, shield: 11, drone: 5, boss: 120, crate: 12, idol: 30, intel: 8 },
+
+  // skill tree: three branches of four, bought in order at the field bench
+  SKILLS: [
+    { id: 'a1', tree: 'ASSAULT',  tier: 1, cost: 50,  name: 'STEADY HANDS',  desc: 'Bullet spread 25% tighter on every weapon' },
+    { id: 'a2', tree: 'ASSAULT',  tier: 2, cost: 90,  name: 'DEEP POCKETS',  desc: 'Carry 30% more reserve ammunition' },
+    { id: 'a3', tree: 'ASSAULT',  tier: 3, cost: 140, name: 'DEMOLITIONIST', desc: '+1 frag grenade and 25% bigger blasts' },
+    { id: 'a4', tree: 'ASSAULT',  tier: 4, cost: 200, name: 'ADRENALINE',    desc: 'Each kill: +15% fire rate for 4 seconds' },
+    { id: 's1', tree: 'STEALTH',  tier: 1, cost: 50,  name: 'LIGHT FEET',    desc: 'Footsteps and gunfire carry 35% less far' },
+    { id: 's2', tree: 'STEALTH',  tier: 2, cost: 90,  name: 'GHOST',         desc: 'Enemies spot you from 20% closer' },
+    { id: 's3', tree: 'STEALTH',  tier: 3, cost: 140, name: 'SMOKE SCREEN',  desc: '+1 smoke grenade, smoke lasts 50% longer' },
+    { id: 's4', tree: 'STEALTH',  tier: 4, cost: 200, name: 'EXECUTIONER',   desc: '+60% damage to enemies who have not noticed you' },
+    { id: 'v1', tree: 'SURVIVAL', tier: 1, cost: 50,  name: 'THICK SKIN',    desc: 'Take 12% less damage' },
+    { id: 'v2', tree: 'SURVIVAL', tier: 2, cost: 90,  name: 'FIELD DRESSING', desc: 'Health regeneration starts 2 s sooner and runs 50% faster' },
+    { id: 'v3', tree: 'SURVIVAL', tier: 3, cost: 140, name: 'SCAVENGER',     desc: '+50% salvage from everything' },
+    { id: 'v4', tree: 'SURVIVAL', tier: 4, cost: 200, name: 'LAST STAND',    desc: 'Once per level a killing blow leaves you on 1 HP' }
+  ],
+  // weapon mods: bought once, always fitted
+  MODS: [
+    { id: 'ar_mag',   wpn: 'ar', cost: 70,  name: 'EXTENDED MAG',    desc: 'Assault rifle: +10 rounds per magazine' },
+    { id: 'ar_comp',  wpn: 'ar', cost: 90,  name: 'COMPENSATOR',     desc: 'Assault rifle: 40% less recoil and bloom' },
+    { id: 'ar_ap',    wpn: 'ar', cost: 130, name: 'AP ROUNDS',       desc: 'Assault rifle: +15% damage' },
+    { id: 'sg_choke', wpn: 'sg', cost: 80,  name: 'FULL CHOKE',      desc: 'Shotgun: 30% tighter pattern, longer reach' },
+    { id: 'sg_drum',  wpn: 'sg', cost: 100, name: 'DRUM MAG',        desc: 'Shotgun: +3 shells' },
+    { id: 'mr_scope', wpn: 'mr', cost: 90,  name: 'HIGH-POWER SCOPE', desc: 'Marksman rifle: deeper zoom, headshots x3.5' },
+    { id: 'mr_supp',  wpn: 'mr', cost: 120, name: 'SUPPRESSOR',      desc: 'Marksman rifle: shots barely carry' },
+    { id: 'xb_quick', wpn: 'xb', cost: 70,  name: 'QUICK DRAW',      desc: 'Crossbow: reload 35% faster' },
+    { id: 'xb_boom',  wpn: 'xb', cost: 140, name: 'EXPLOSIVE BOLTS', desc: 'Crossbow: bolts burst on impact (loud)' },
+    { id: 'ft_tank',  wpn: 'ft', cost: 90,  name: 'TWIN TANK',       desc: 'Flamethrower: +50 fuel per tank' }
   ],
 
   ENEMY: {

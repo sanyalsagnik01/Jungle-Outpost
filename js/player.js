@@ -21,7 +21,7 @@ P.init = function (scene) { P.model = M.player(); scene.add(P.model.g); };
 
 /* ---------- GLB presentation (optional; the primitive model above stays as the fallback) ---------- */
 P.gfx = null; P.wpn = []; P.wpnCur = -1; P.deadT = 0;
-var WPN_MODELS = ['ar', 'shotgun', 'marksman'], tmpV = new THREE.Vector3();
+var WPN_MODELS = ['ar', 'shotgun', 'marksman', 'crossbow', 'flamethrower'], tmpV = new THREE.Vector3();
 P.attachModels = function () {
   var As = JO.Assets, g = P.model.g, k = As.instantiate('kade'), i;
   if (!k) return false;
@@ -87,11 +87,12 @@ P.damage = function (amt, sx, sz, tag) {
   var Gm = JO.Game;
   if (P.invuln > 0 && P.rolling > 0 && !P.dead) JO.Events.emit('dodge');
   if (P.dead || P.invuln > 0 || Gm.state !== 'playing' || Gm.bossDying) return false;
-  amt *= Gm.diffCfg.dmg; Gm.stats.dmgTaken += amt;
+  amt *= Gm.diffCfg.dmg * JO.Perks.taken(); Gm.stats.dmgTaken += amt;
   if (Gm.debug.dmgBy) Gm.debug.dmgBy[tag || 'other'] = (Gm.debug.dmgBy[tag || 'other'] || 0) + Math.round(amt);
   if (Gm.debug.god) return true;
   if (P.armor > 0) { var a = Math.min(P.armor, amt); P.armor -= a; amt -= a; A.play('armor'); }
   if (amt > 0) { P.hp -= amt; A.play('hurt'); }
+  if (P.hp <= 0 && JO.Perks.has('v4') && !JO.Perks.lastStand) { JO.Perks.lastStand = true; P.hp = 1; P.invuln = 2; JO.UI.banner('LAST STAND', 1.6, true); }
   P.sinceDmg = 0; JO.UI.hurt(sx, sz); FX.addShake(Math.min(0.5, 0.12 + amt * 0.015));
   if (P.gfx) { P.gfx.flash(0x992a1a, 0.1); if (JO.Weapons.reloading <= 0) P.gfx.playOnce('hit'); }
   JO.Events.emit('player_hurt', amt, tag);
@@ -142,7 +143,8 @@ P.update = function (dt) {
       if (P.inWater) FX.burst(P.pos.x, 0.15, P.pos.z, 4, 0xcfeeee, 2, 0.35, 8, 0.1, 1.5); } }
 
   P.sinceDmg += dt;
-  if (P.sinceDmg > PC.regenDelay && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + PC.regenRate * dt);
+  var fd = JO.Perks.has('v2');
+  if (P.sinceDmg > PC.regenDelay - (fd ? 2 : 0) && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + PC.regenRate * (fd ? 1.5 : 1) * dt);
 
   // supply crates
   P.nearCrate = null;
@@ -174,7 +176,7 @@ Cam.compute = function (alpha, frameDt) {
   Cam.x = vx + ox * len; Cam.y = Math.max(0.25, vy + oy * len); Cam.z = vz + oz * len;
   Cam.fx = fx; Cam.fy = fy; Cam.fz = fz; Cam.rx = rx; Cam.rz = rz;
   Cam.ux = -rz * fy; Cam.uy = rz * fx - rx * fz; Cam.uz = rx * fy;
-  Cam.dist = len; Cam.fov = 65 - 25 * k;
+  Cam.dist = len; Cam.fov = 65 - (JO.Weapons.cur === 2 && JO.Perks.mod('mr_scope') ? 40 : 25) * k;
 };
 Cam.apply = function (camera) {
   var s = FX.shake * 0.35;
@@ -190,37 +192,47 @@ var Wp = JO.Weapons = { slots: [], cur: 0, cd: 0, reloading: 0, bloom: 0, swapT:
 var HIT = { t: 0, enemy: null, part: null, missile: null };
 var accE = [], accD = [], accX = [], accY = [], accZ = [], accF = [];
 
-Wp.magSize = function (i) { return Math.round(CFG.WEAPONS[i].mag * (1 + 0.3 * P.up.mag)); };
+Wp.magSize = function (i) { var c = CFG.WEAPONS[i]; return Math.round((c.mag + JO.Perks.magBonus(c.id)) * (c.mag > 1 ? 1 + 0.3 * P.up.mag : 1)); };
+Wp.maxReserve = function (s) { return Math.round(s.cfg.maxReserve * JO.Perks.reserve()); };
 Wp.resetRun = function () {
   Wp.slots = CFG.WEAPONS.map(function (c, i) { return { cfg: c, mag: c.mag, reserve: c.reserve, unlocked: false, idx: i }; });
   Wp.cur = 0; Wp.cd = 0; Wp.reloading = 0; Wp.bloom = 0;
+  if (JO.Arsenal) JO.Arsenal.resetRun();
 };
 Wp.unlockFor = function (levelIdx) {
-  var newly = null;
-  Wp.slots.forEach(function (s) { if (!s.unlocked && s.cfg.unlockLevel <= levelIdx) { s.unlocked = true; s.mag = Wp.magSize(s.idx); s.reserve = s.cfg.reserve; if (s.cfg.unlockLevel === levelIdx && levelIdx > 0) newly = s; } });
-  return newly;
+  var newly = [];
+  Wp.slots.forEach(function (s) { if (!s.unlocked && s.cfg.unlockLevel <= levelIdx) { s.unlocked = true; s.mag = Wp.magSize(s.idx); s.reserve = s.cfg.reserve; if (s.cfg.unlockLevel === levelIdx && levelIdx > 0) newly.push(s); } });
+  return newly.length ? newly : null;
 };
 Wp.refill = function (reserveToo) { Wp.slots.forEach(function (s) { s.mag = Wp.magSize(s.idx); if (reserveToo) s.reserve = Math.max(s.reserve, s.cfg.reserve); }); };
 Wp.snapshot = function () { return { cur: Wp.cur, s: Wp.slots.map(function (s) { return [s.mag, s.reserve]; }) }; };
 Wp.restore = function (snap) {
   Wp.cur = snap.cur; Wp.cd = 0; Wp.reloading = 0; Wp.bloom = 0;
-  Wp.slots.forEach(function (s, i) { s.mag = Wp.magSize(i); s.reserve = Math.max(snap.s[i][1], Math.round(s.cfg.reserve * 0.6)); });
+  Wp.slots.forEach(function (s, i) { s.mag = Wp.magSize(i); s.reserve = Math.max(snap.s[i] ? snap.s[i][1] : 0, Math.round(s.cfg.reserve * 0.6)); });
+};
+// exact restore (saved games): keeps the magazines and reserves as they were
+Wp.load = function (snap) {
+  if (!snap || !snap.s) return; Wp.cd = 0; Wp.reloading = 0; Wp.bloom = 0;
+  Wp.slots.forEach(function (s, i) { var v = snap.s[i]; if (!v) return; s.mag = Math.min(Wp.magSize(i), v[0] | 0); s.reserve = Math.min(Wp.maxReserve(s), v[1] | 0); });
+  Wp.cur = Wp.slots[snap.cur] && Wp.slots[snap.cur].unlocked ? snap.cur : 0;
 };
 Wp.addAmmo = function () {
   var got = false;
-  Wp.slots.forEach(function (s) { if (!s.unlocked || s.reserve >= s.cfg.maxReserve) return; s.reserve = Math.min(s.cfg.maxReserve, s.reserve + s.cfg.pickup); got = true; });
+  Wp.slots.forEach(function (s) { var mx = Wp.maxReserve(s); if (!s.unlocked || s.reserve >= mx) return; s.reserve = Math.min(mx, s.reserve + s.cfg.pickup); got = true; });
+  if (JO.Arsenal.give('frag', 1)) got = true;
   return got;
 };
 Wp.current = function () { return Wp.slots[Wp.cur]; };
 function startReload() {
   var s = Wp.slots[Wp.cur]; if (Wp.reloading > 0 || s.mag >= Wp.magSize(Wp.cur) || s.reserve <= 0) return;
-  Wp.reloadTotal = Wp.reloading = s.cfg.reload * (1 - Math.min(0.6, 0.25 * P.up.reload)); A.play('reload');
+  Wp.reloadTotal = Wp.reloading = s.cfg.reload * (1 - Math.min(0.6, 0.25 * P.up.reload)) * JO.Perks.reload(s.cfg.id); A.play('reload');
   if (P.gfx && P.gfx.shots.reload) P.gfx.playOnce('reload', { timeScale: P.gfx.shots.reload.duration / Wp.reloading });
 }
 Wp.reloadTotal = 1;
 function trySwitch(n) {
-  if (n === -1) { for (var k = 1; k <= 3; k++) { var j = (Wp.cur + k) % 3; if (Wp.slots[j].unlocked) { n = j + 1; break; } } }
-  var i = n - 1; if (i < 0 || i > 2 || i === Wp.cur || !Wp.slots[i].unlocked) return;
+  var N = Wp.slots.length;
+  if (n === -1) { for (var k = 1; k <= N; k++) { var j = (Wp.cur + k) % N; if (Wp.slots[j].unlocked) { n = j + 1; break; } } }
+  var i = n - 1; if (i < 0 || i >= N || i === Wp.cur || !Wp.slots[i].unlocked) return;
   if (Wp.reloading > 0 && P.gfx) P.gfx.stopShot();
   Wp.cur = i; Wp.reloading = 0; Wp.cd = Math.max(Wp.cd, 0.28); Wp.bloom = 0; A.play('swap');
 }
@@ -231,6 +243,7 @@ Wp.update = function (dt) {
   if (I.weapon) trySwitch(I.weapon);
   var s = Wp.slots[Wp.cur];
   if (Wp.cd > 0) Wp.cd -= dt;
+  JO.Perks.update(dt);
   if (Wp.bloom > 0) Wp.bloom = Math.max(0, Wp.bloom - dt * 5);
   if (P.kick > 0) P.kick = Math.max(0, P.kick - dt * (0.12 + P.kick * 7));
   if (Wp.reloading > 0) { Wp.reloading -= dt;
@@ -245,14 +258,18 @@ Wp.update = function (dt) {
 
 function shoot(s) {
   var c = s.cfg, Gm = JO.Game, E = JO.Enemies;
-  s.mag--; Wp.cd = c.interval / (1 + 0.2 * P.up.fire); Gm.stats.shots++;
-  A.play(c.id);
+  var Pk = JO.Perks, flame = c.kind === 'flame', bolt = c.kind === 'bolt';
+  s.mag--; Wp.cd = c.interval / ((flame ? 1 : 1 + 0.2 * P.up.fire) * Pk.fire()); if (!flame || s.mag % 5 === 0) Gm.stats.shots++;
+  A.play(c.id); JO.Events.emit('noise', P.pos.x, P.pos.z, Pk.noise(c), 'shot');
   var sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
   var mx = P.pos.x - cy * 0.28 + sy * 0.95, my = P.pos.y + 1.33 + Cam.fy * 0.6, mz = P.pos.z + sy * 0.28 + cy * 0.95;
   if (P.muzzle(tmpV)) { mx = tmpV.x; my = tmpV.y; mz = tmpV.z; }
+  if (flame) {                                                   // a cone, not a ray: arsenal.js burns whatever stands in it
+    if (JO.Arsenal.flame(c, mx, my, mz) && s.mag % 5 === 0) { Gm.stats.hits++; JO.UI.hitmarker(''); }
+    if (s.mag === 0 && s.reserve > 0) startReload(); return; }
   if (P.gfx) P.gfx.playOnce('shoot', { timeScale: 1.5 });
-  FX.muzzleFlash(mx, my, mz, c.id === 'sg' ? 0.85 : (c.id === 'mr' ? 0.7 : 0.5));
-  var spread = (I.ads ? c.adsSpread : c.spread) + Wp.bloom + (P.onGround ? 0 : 1.5);
+  if (!bolt) FX.muzzleFlash(mx, my, mz, c.id === 'sg' ? 0.85 : (c.id === 'mr' ? 0.7 : 0.5));
+  var spread = ((I.ads ? c.adsSpread : c.spread) + Wp.bloom + (P.onGround ? 0 : 1.5)) * Pk.spread(c.id);
   var anyHit = false, head = false, killed = false, crit = false, n = 0, start = Cam.dist + 0.2;
   for (var p = 0; p < c.pellets; p++) {
     var a = Math.tan(spread * DEG * Math.sqrt(Math.random())), ph = Math.random() * 6.283, tx = a * Math.cos(ph), ty = a * Math.sin(ph);
@@ -261,11 +278,13 @@ function shoot(s) {
     var ox = Cam.x + dx * start, oy = Cam.y + dy * start, oz = Cam.z + dz * start;
     E.hitscan(ox, oy, oz, dx, dy, dz, c.range, HIT);
     var ex = ox + dx * HIT.t, ey = oy + dy * HIT.t, ez = oz + dz * HIT.t;
-    FX.tracer(mx, my, mz, ex, ey, ez, c.id === 'mr' ? 0xffffff : 0xffe9a0, c.id === 'mr' ? 0.06 : 0.035, c.id === 'mr' ? 0.16 : 0.08);
+    FX.tracer(mx, my, mz, ex, ey, ez, bolt ? 0x9adfff : (c.id === 'mr' ? 0xffffff : 0xffe9a0), c.id === 'mr' || bolt ? 0.06 : 0.035, bolt ? 0.3 : (c.id === 'mr' ? 0.16 : 0.08));
+    if (JO.Stealth) JO.Stealth.shot(ox, oy, oz, dx, dy, dz, HIT.t, c);
+    if (bolt && Pk.mod('xb_boom') && HIT.t < c.range) JO.Arsenal.blast(ex, Math.max(0.3, ey), ez, 3, 60, 0.3);
     if (HIT.enemy) {
-      var dmg = c.dmg;
+      var dmg = c.dmg * Pk.damage(c, HIT.enemy);
       if (c.falloff) { var d = HIT.t; if (d > c.falloff[0]) dmg *= Math.max(c.falloff[2], 1 - (d - c.falloff[0]) / (c.falloff[1] - c.falloff[0]) * (1 - c.falloff[2])); }
-      var r = HIT.enemy.takeHit(dmg, HIT.part, dx, dz, ey, c.headMult);
+      var r = HIT.enemy.takeHit(dmg, HIT.part, dx, dz, ey, Pk.headMult(c));
       if (r.blocked) { FX.burst(ex, ey, ez, 4, 0xfff0a0, 5, 0.18, 6, 0.09); if (!r.silent) { A.playAt('clang', ex, ez); add(HIT.enemy, 0, ex, ey, ez, 3); } }
       else if (r.dealt > 0) { anyHit = true; if (r.head) head = true; if (r.crit) crit = true; if (r.killed) killed = true;
         FX.burst(ex, ey, ez, 5, HIT.enemy.spark || 0xff5030, 3.5, 0.3, 9, 0.11); add(HIT.enemy, r.dealt, ex, ey, ez, r.head ? 1 : (r.crit ? 2 : 0)); }
@@ -278,7 +297,7 @@ function shoot(s) {
     if (f === 3) JO.UI.dmgNum(accX[q], accY[q] + 0.3, accZ[q], 'BLOCKED', 'blk');
     else JO.UI.dmgNum(accX[q], accY[q] + 0.3, accZ[q], '' + Math.max(1, Math.round(accD[q])), f === 1 ? 'head' : (f === 2 ? 'crit' : '')); accE[q] = null; }
   if (anyHit) { Gm.stats.hits++; JO.UI.hitmarker(killed ? 'kill' : (head ? 'head' : '')); A.play(head ? 'head' : 'hit'); if (killed) { A.play('kill'); JO.Events.emit('player_kill', head); } }
-  P.kick = Math.min(0.09, P.kick + c.recoil); Wp.bloom = Math.min(2.4, Wp.bloom + c.bloom);
+  P.kick = Math.min(0.09, P.kick + c.recoil * Pk.recoil(c.id)); Wp.bloom = Math.min(2.4, Wp.bloom + c.bloom * Pk.recoil(c.id));
   if (s.mag === 0 && s.reserve > 0) startReload();
 }
 })();

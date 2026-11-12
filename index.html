@@ -150,6 +150,17 @@ body.paused #dlg,body.paused #bark{visibility:hidden}
 #tFire{right:26px;bottom:96px;width:84px;height:84px;background:rgba(200,40,20,.45);font-size:16px}
 #tJump{right:124px;bottom:40px}#tRoll{right:126px;bottom:124px}#tReload{right:34px;bottom:196px}
 #tAds{right:204px;bottom:70px}#tSwap{right:120px;bottom:206px}#tUse{right:210px;bottom:160px}
+#tNade{right:34px;bottom:270px;width:52px;height:52px;font-size:11px}#tSmoke{right:96px;bottom:280px;width:52px;height:52px;font-size:11px}#tBench{right:210px;bottom:230px}
+#hudNades{margin-top:5px;font-size:11px;letter-spacing:1px;opacity:.85}#hudSalvage{font-size:12px;margin-top:3px;color:var(--amber)}
+#benchSalvage{font-family:var(--head);font-size:26px;letter-spacing:4px;color:var(--amber);margin:-6px 0 4px}
+#benchBody{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:min(1100px,96vw);max-height:56vh;overflow:auto;padding:2px}
+.bcol{display:flex;flex-direction:column;gap:6px;width:min(250px,44vw)}.bcol h3{margin:0 0 2px}
+.bcard{pointer-events:auto;text-align:left;padding:8px 10px;background:rgba(20,34,20,.9);border:1px solid rgba(255,182,46,.45);border-left:3px solid var(--amber);color:var(--bone);font-family:var(--body);cursor:pointer}
+.bcard b{display:block;font-family:var(--head);font-weight:normal;letter-spacing:2px;font-size:16px;color:var(--amber)}
+.bcard small{display:block;font-size:12px;line-height:1.3;margin:2px 0 4px;opacity:.9}.bcard i{display:block;font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--cyan)}
+.bcard.no{opacity:.5;border-left-color:rgba(255,255,255,.3)}.bcard.no i{color:var(--bone)}
+.bcard.own{border-color:var(--cyan);border-left-color:var(--cyan);background:rgba(16,44,40,.9)}.bcard.own b{color:var(--cyan)}
+.bcard:focus-visible,.bcard:hover{outline:2px solid var(--amber)}
 
 /* ---------- screens ---------- */
 .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:40;
@@ -205,7 +216,7 @@ body.touch #prompt{top:40%}
 <div id="vignette"></div><div id="lowhp"></div>
 
 <div id="hud" class="hidden">
-  <div id="hudTL" class="panel"><div id="hudLevel"></div><div id="hudObj"></div><div id="hudKills"></div></div>
+  <div id="hudTL" class="panel"><div id="hudLevel"></div><div id="hudObj"></div><div id="hudKills"></div><div id="hudSalvage"></div></div>
   <div id="bossWrap" class="hidden"><div id="bossName"></div><div id="bossBar"><div id="bossFill"></div></div><div id="bossPhase"></div></div>
   <div id="hudBL" class="panel">
     <div class="bar"><i id="hpFill"></i><em>HP</em><span id="hpTxt"></span></div>
@@ -213,7 +224,8 @@ body.touch #prompt{top:40%}
     <div class="bar thin"><i id="stFill"></i></div>
   </div>
   <div id="hudBR" class="panel"><div id="wName"></div><div id="wAmmo"></div>
-    <div id="slots"><span id="s1">1 AR</span><span id="s2">2 SG</span><span id="s3">3 MR</span></div></div>
+    <div id="slots"><span id="s1">1 AR</span><span id="s2">2 SG</span><span id="s3">3 MR</span><span id="s4">4 XB</span><span id="s5">5 FT</span></div>
+    <div id="hudNades"></div></div>
   <div id="banner"></div>
   <div id="reloadTxt" class="hidden">RELOADING</div>
   <div id="prompt" class="hidden"></div>
@@ -233,6 +245,9 @@ body.touch #prompt{top:40%}
   <div id="tAds" class="tbtn" data-act="ads">AIM</div>
   <div id="tSwap" class="tbtn" data-act="swap">SWAP</div>
   <div id="tUse" class="tbtn hidden" data-act="use">USE</div>
+  <div id="tNade" class="tbtn" data-act="nade">FRAG</div>
+  <div id="tSmoke" class="tbtn" data-act="smoke">SMOKE</div>
+  <div id="tBench" class="tbtn hidden" data-act="bench">BENCH</div>
 </div>
 
 <div id="dlg" class="hidden"><div id="dlgPic"></div><div><div id="dlgName"></div><div id="dlgText"></div></div><small>ENTER</small></div>
@@ -256,7 +271,9 @@ body.touch #prompt{top:40%}
   <h1 class="logo">JUNGLE<span>OUTPOST</span></h1>
   <div class="tag">ONE ENGINEER &middot; ONE MISSING SISTER &middot; ONE VALLEY THAT HUMS</div>
   <div id="loadWrap"><div id="loadBar"><i id="loadFill"></i></div><div id="loadTxt">LOADING MODELS</div></div>
+  <button class="btn hidden" id="btnContinue">CONTINUE</button>
   <button class="btn" id="btnStart">START MISSION</button>
+  <button class="btn ghost" id="btnBench">FIELD BENCH</button>
   <button class="btn ghost" id="btnCodex">CODEX</button>
   <button class="btn ghost" id="btnControls">CONTROLS</button>
   <div class="row diff" id="diffRow">
@@ -272,7 +289,8 @@ body.touch #prompt{top:40%}
     <tr><td>Left mouse</td><td>Shoot</td></tr><tr><td>Right mouse</td><td>Aim down sights (zoom, tighter spread)</td></tr>
     <tr><td>Shift</td><td>Sprint (uses stamina)</td></tr><tr><td>Space</td><td>Jump (clears shockwaves)</td></tr>
     <tr><td>C or Ctrl</td><td>Roll / dodge &mdash; brief invulnerability</td></tr><tr><td>R</td><td>Reload</td></tr>
-    <tr><td>1 / 2 / 3</td><td>Assault rifle / Shotgun / Marksman rifle</td></tr><tr><td>E</td><td>Open supply crates</td></tr>
+    <tr><td>1 / 2 / 3</td><td>Assault rifle / Shotgun / Marksman rifle</td></tr><tr><td>4 / 5</td><td>Crossbow (silent) / Flamethrower</td></tr>
+    <tr><td>G / Q</td><td>Throw frag grenade / smoke grenade</td></tr><tr><td>B</td><td>Field bench at a reached checkpoint (skills, weapon mods)</td></tr><tr><td>E</td><td>Open supply crates</td></tr>
     <tr><td>Esc</td><td>Pause</td></tr><tr><td>M</td><td>Mute</td></tr>
   </table>
   <div class="note" style="margin:0 0 14px">Tip: prefer <b>C</b> for rolling &mdash; browsers reserve Ctrl+W to close the tab.<br>
@@ -292,7 +310,7 @@ body.touch #prompt{top:40%}
   <button class="btn ghost" id="btnPauseCodex">CODEX</button>
   <button class="btn ghost" id="btnPauseRestart">RESTART LEVEL</button>
   <button class="btn ghost" id="btnPauseQuit">QUIT TO TITLE</button>
-  <div class="note">WASD move &middot; Shift sprint &middot; Space jump &middot; C roll &middot; LMB shoot &middot; RMB aim &middot; R reload &middot; 1/2/3 weapons &middot; E interact &middot; M mute</div>
+  <div class="note">WASD move &middot; Shift sprint &middot; Space jump &middot; C roll &middot; LMB shoot &middot; RMB aim &middot; R reload &middot; 1-5 weapons &middot; G frag &middot; Q smoke &middot; E interact &middot; B bench &middot; M mute</div>
 </div>
 
 <div id="scrDead" class="screen hidden">
@@ -306,6 +324,7 @@ body.touch #prompt{top:40%}
   <h3 id="doneSub"></h3><h2>LEVEL COMPLETE</h2>
   <div class="stats" id="doneStats"></div>
   <div class="found" id="doneFound"></div>
+  <button class="btn ghost" id="btnDoneBench">FIELD BENCH</button>
   <h3>CHOOSE ONE FIELD UPGRADE</h3>
   <div class="cards" id="upCards"></div>
 </div>
@@ -323,6 +342,15 @@ body.touch #prompt{top:40%}
   <div class="split"><div id="cxList"></div><div id="cxBody"></div></div>
   <div class="note" id="cxCount" style="margin:10px 0"></div>
   <button class="btn" id="btnCodexBack">BACK</button>
+</div>
+
+<div id="scrBench" class="screen hidden">
+  <h2>FIELD BENCH</h2>
+  <div id="benchSalvage"></div>
+  <div class="tabs" id="benchTabs"><button data-tab="skills">SKILLS</button><button data-tab="mods">WEAPON MODS</button></div>
+  <div id="benchBody"></div>
+  <div class="note" style="margin:10px 0">Salvage comes from kills, crates, intel and bosses. Skills and mods stay with your profile.</div>
+  <button class="btn" id="btnBenchClose">BACK</button>
 </div>
 
 <div id="scrChoice" class="screen clear hidden">
@@ -352,6 +380,8 @@ body.touch #prompt{top:40%}
 <script src="js/bosses.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/story.js"></script>
+<script src="js/perks.js"></script>
+<script src="js/arsenal.js"></script>
 <script src="js/codex.js"></script>
 <script src="js/finale.js"></script>
 <script src="js/main.js"></script>

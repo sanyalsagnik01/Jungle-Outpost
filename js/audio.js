@@ -91,6 +91,10 @@ var S = {
   win: function (v) { [523, 659, 784, 1047, 1319].forEach(function (f, i) { tone({ f: f, dur: 0.3, vol: 0.3 * v, type: 'triangle', delay: i * 0.14 }); }); }
 };
 
+// later modules add their own sounds here
+A.sounds = S; A.tone = function (o) { if (ctx) tone(o); }; A.noise = function (o) { if (ctx) noise(o); };
+S.xb = function (v) { noise({ dur: 0.07, vol: 0.2 * v, f: 1400, type: 'bandpass' }); tone({ f: 240, f2: 120, dur: 0.09, vol: 0.2 * v, type: 'triangle' }); };
+S.ft = function (v) { noise({ dur: 0.16, vol: 0.3 * v, f: 700, f2: 1600, type: 'bandpass', q: 0.5 }); };
 A.play = function (name, vol) {
   if (!ctx || A.muted) return;
   var now = ctx.currentTime; if (last[name] && now - last[name] < 0.035) return; last[name] = now;
