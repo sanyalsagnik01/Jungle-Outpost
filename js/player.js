@@ -85,6 +85,7 @@ P.look = function (dx, dy) {
 // returns true when damage was actually applied (false = dodged)
 P.damage = function (amt, sx, sz, tag) {
   var Gm = JO.Game;
+  if (P.invuln > 0 && P.rolling > 0 && !P.dead) JO.Events.emit('dodge');
   if (P.dead || P.invuln > 0 || Gm.state !== 'playing' || Gm.bossDying) return false;
   amt *= Gm.diffCfg.dmg; Gm.stats.dmgTaken += amt;
   if (Gm.debug.dmgBy) Gm.debug.dmgBy[tag || 'other'] = (Gm.debug.dmgBy[tag || 'other'] || 0) + Math.round(amt);
@@ -93,6 +94,7 @@ P.damage = function (amt, sx, sz, tag) {
   if (amt > 0) { P.hp -= amt; A.play('hurt'); }
   P.sinceDmg = 0; JO.UI.hurt(sx, sz); FX.addShake(Math.min(0.5, 0.12 + amt * 0.015));
   if (P.gfx) { P.gfx.flash(0x992a1a, 0.1); if (JO.Weapons.reloading <= 0) P.gfx.playOnce('hit'); }
+  JO.Events.emit('player_hurt', amt, tag);
   if (P.hp <= 0) { P.hp = 0; P.dead = true; P.rolling = 0; P.deadT = 0; A.play('die'); if (P.gfx) P.gfx.playOnce('death', { full: true, hold: true }); Gm.onPlayerDead(); }
   return true;
 };
@@ -275,7 +277,7 @@ function shoot(s) {
   for (var q = 0; q < n; q++) { var f = accF[q];
     if (f === 3) JO.UI.dmgNum(accX[q], accY[q] + 0.3, accZ[q], 'BLOCKED', 'blk');
     else JO.UI.dmgNum(accX[q], accY[q] + 0.3, accZ[q], '' + Math.max(1, Math.round(accD[q])), f === 1 ? 'head' : (f === 2 ? 'crit' : '')); accE[q] = null; }
-  if (anyHit) { Gm.stats.hits++; JO.UI.hitmarker(killed ? 'kill' : (head ? 'head' : '')); A.play(head ? 'head' : 'hit'); if (killed) A.play('kill'); }
+  if (anyHit) { Gm.stats.hits++; JO.UI.hitmarker(killed ? 'kill' : (head ? 'head' : '')); A.play(head ? 'head' : 'hit'); if (killed) { A.play('kill'); JO.Events.emit('player_kill', head); } }
   P.kick = Math.min(0.09, P.kick + c.recoil); Wp.bloom = Math.min(2.4, Wp.bloom + c.bloom);
   if (s.mag === 0 && s.reserve > 0) startReload();
 }

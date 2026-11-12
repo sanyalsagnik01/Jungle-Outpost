@@ -64,7 +64,7 @@ var proto = {
     E.scene.remove(this.mesh); for (var i = 0; i < this.extra.length; i++) { E.scene.remove(this.extra[i]); if (this.extra[i].material) this.extra[i].material.dispose(); }
     for (var k = 0; k < this.mats.length; k++) this.mats[k].dispose(); if (this.line) this.line.life = 0; if (this.gfx) this.gfx.dispose();
   },
-  setPhase: function (n, msg) { this.phase = n; this.atkI = 0; if (this.gfx) this.gfx.playOnce('phase_change', FULL); A.play('roar'); FX.addShake(0.7); JO.UI.banner(msg, 2.6, true); FX.burst(this.pos.x, 2.5, this.pos.z, 30, 0xff5030, 9, 0.8, 6, 0.24, 3); }
+  setPhase: function (n, msg) { this.phase = n; this.atkI = 0; JO.Events.emit('boss_phase', this, n); if (this.gfx) this.gfx.playOnce('phase_change', FULL); A.play('roar'); FX.addShake(0.7); JO.UI.banner(msg, 2.6, true); FX.burst(this.pos.x, 2.5, this.pos.z, 30, 0xff5030, 9, 0.8, 6, 0.24, 3); }
 };
 function extend(C) {
   for (var k in proto) if (!C.prototype[k]) C.prototype[k] = proto[k];
@@ -194,7 +194,7 @@ Brute.prototype.update = function (dt) {
     this.walk += st * 1.2; this.moving = true; if (Math.random() < 0.6) FX.burst(this.pos.x, 0.2, this.pos.z, 1, 0x9a8a66, 2, 0.4, 2, 0.3, 1);
     if (!this.hitDone && this.dist < 2.3 && P.pos.y < 2.5) { this.hitDone = true; if (P.damage(c.chargeDmg, this.pos.x, this.pos.z, 'charge')) P.knock(this.cdx * 12, this.cdz * 12); }
     if (Math.hypot(this.pos.x - px, this.pos.z - pz) < st * 0.5) {          // crashed into a pillar / the wall -> stunned
-      this.state = 'stun'; this.stateT = c.stun; FX.addShake(0.9); A.play('stomp'); A.play('clang', 1.5);
+      this.state = 'stun'; this.stateT = c.stun; JO.Events.emit('boss_stun', this); FX.addShake(0.9); A.play('stomp'); A.play('clang', 1.5);
       FX.burst(this.pos.x + this.cdx * 1.5, 2, this.pos.z + this.cdz * 1.5, 26, 0xb0a890, 8, 0.8, 9, 0.26, 3); JO.UI.banner('STUNNED — HIT THE TANK ON HIS BACK', 2.2, false);
     } else { this.stateT -= dt; if (this.stateT <= 0) { this.state = 'recover'; this.stateT = 0.7; } }
   }

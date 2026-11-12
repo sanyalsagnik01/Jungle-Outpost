@@ -121,7 +121,7 @@ EP.spawn = function (x, z, o) {
 EP.setAlert = function () {
   if (this.state !== 'patrol') return;
   this.state = 'alert'; this.stateT = 0.35 + Math.random() * 0.3; this.alerted = true;
-  A.playAt('alert', this.pos.x, this.pos.z); E.alertNear(this.pos.x, this.pos.z, 16);
+  A.playAt('alert', this.pos.x, this.pos.z); E.alertNear(this.pos.x, this.pos.z, 16); JO.Events.emit('enemy_alert', this);
 };
 EP.takeHit = function (dmg, part, dx, dz, hy, headMult) {
   R.dealt = 0; R.blocked = false; R.head = false; R.crit = false; R.killed = false; R.silent = false;
@@ -133,6 +133,7 @@ EP.takeHit = function (dmg, part, dx, dz, hy, headMult) {
   if (this.gfx) { this.gfx.flash(0x8a8a8a, 0.09); if (this.hp > 0 && this.sub !== 'windup' && this.sub !== 'throw') this.gfx.playOnce('hit'); }
   if (this.hp <= 0) { this.die(); R.killed = true; }
   else {
+    JO.Events.emit('enemy_hurt', this);
     if (this.state === 'patrol') this.setAlert();
     if (this.type === 'sniper' && this.alt && this.state !== 'retreat') {            // relocate along the zip-line
       this.state = 'retreat'; this.stateT = 0; this.fromX = this.pos.x; this.fromZ = this.pos.z; this.toX = this.alt[0]; this.toZ = this.alt[1];
@@ -144,7 +145,7 @@ EP.hideLaser = function () { if (this.laser) this.laser.visible = this.dot.visib
 EP.die = function () {
   this.alive = false; this.state = 'dead'; this.deadT = 0; this.vy = 2; this.hideLaser();
   for (var i = 0; i < this.mats.length; i++) { this.mats[i].transparent = true; this.mats[i].needsUpdate = true; }
-  JO.Game.onKill(this);
+  JO.Game.onKill(this); JO.Events.emit('enemy_die', this);
 };
 EP.deadUpdate = function (dt) {
   this.deadT += dt;
@@ -209,7 +210,7 @@ AI.rifleman = function (e, dt) {
     if (dr < 0.8 || e.stateT <= 0) { e.state = 'attack'; e.sub = 'fight'; e.fightT = 4.5; e.ax = e.pos.x; e.az = e.pos.z; e.strafe = 1; e.strafeT = 0.6; e.cd = 0.8; }
     return;
   }
-  if (e.hp < e.maxHp * c.retreatHp && !e.retreated) { e.retreated = true; pickCover(e, true, false); e.state = 'retreat'; e.stateT = 3.2; e.burst = 0; return; }
+  if (e.hp < e.maxHp * c.retreatHp && !e.retreated) { e.retreated = true; pickCover(e, true, false); e.state = 'retreat'; e.stateT = 3.2; e.burst = 0; JO.Events.emit('enemy_retreat', e); return; }
   if (e.sub === 'move') {
     e.stateT -= dt; var d = moveToward(e, e.tx, e.tz, c.speed, dt);
     if (e.see) facePlayer(e, dt, 6); else e.yaw = turnToward(e.yaw, Math.atan2(e.tx - e.pos.x, e.tz - e.pos.z), dt * 6);
@@ -244,6 +245,7 @@ AI.runner = function (e, dt) {
     var dx = e.ndx * cs - e.ndz * sn, dz = e.ndx * sn + e.ndz * cs;
     moveToward(e, e.pos.x + dx * 4, e.pos.z + dz * 4, c.speed, dt); e.yaw = turnToward(e.yaw, Math.atan2(dx, dz), dt * 10);
     if (e.dist < 1.95) { e.sub = 'windup'; e.stateT = c.windup; A.playAt('windup', e.pos.x, e.pos.z, 0.8); }
+    else if (e.dist < 14 && e.dist > 10) JO.Events.emit('enemy_charge', e);
   }
 };
 
@@ -260,7 +262,7 @@ AI.sniper = function (e, dt) {
   facePlayer(e, dt, 5);
   if (e.sub !== 'aim') {
     e.hideLaser(); e.cd -= dt;
-    if (e.cd <= 0 && e.see && e.dist < c.sight) { e.sub = 'aim'; e.stateT = c.aim; e.ax = P.pos.x; e.ay = P.pos.y + 1; e.az = P.pos.z; e.blindT = 0; e.locked = false; A.playAt('beep', e.pos.x, e.pos.z, 1.5); }
+    if (e.cd <= 0 && e.see && e.dist < c.sight) { e.sub = 'aim'; e.stateT = c.aim; e.ax = P.pos.x; e.ay = P.pos.y + 1; e.az = P.pos.z; e.blindT = 0; e.locked = false; A.playAt('beep', e.pos.x, e.pos.z, 1.5); JO.Events.emit('enemy_aim', e); }
     return;
   }
   e.stateT -= dt;
@@ -300,7 +302,7 @@ AI.grenadier = function (e, dt) {
   else if (e.dist > c.range[1]) { e.state = 'attack'; moveToward(e, P.pos.x, P.pos.z, c.speed, dt); }
   else { e.state = 'attack'; moveToward(e, e.pos.x - e.ndz * e.patDir * 3, e.pos.z + e.ndx * e.patDir * 3, c.speed * 0.5, dt); if (Math.random() < dt * 0.4) e.patDir = -e.patDir; }
   e.cd -= dt;
-  if (e.cd <= 0 && e.dist < 32 && e.seenT < 3) { e.sub = 'throw'; e.stateT = 0.55; A.playAt('windup', e.pos.x, e.pos.z, 0.7); }
+  if (e.cd <= 0 && e.dist < 32 && e.seenT < 3) { e.sub = 'throw'; e.stateT = 0.55; A.playAt('windup', e.pos.x, e.pos.z, 0.7); JO.Events.emit('enemy_throw', e); }
 };
 
 /* 5. SHIELD TROOPER — steady advance behind a frontal shield (flank / back / legs), baton up close */

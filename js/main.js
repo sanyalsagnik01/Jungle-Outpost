@@ -8,7 +8,7 @@
 (function () {
 'use strict';
 var JO = window.JO, CFG = JO.CFG, W = JO.World, FX = JO.FX, A = JO.Audio, I = JO.Input, P = JO.Player, Wp = JO.Weapons, Cam = JO.Cam,
-  E = JO.Enemies, H = JO.Haz, B = JO.Bosses, UI = JO.UI, G = W.G;
+  E = JO.Enemies, H = JO.Haz, B = JO.Bosses, UI = JO.UI, G = W.G, Ev = JO.Events, St = JO.Story;
 var STEP = CFG.STEP;
 function newStats() { return { time: 0, kills: 0, shots: 0, hits: 0, dmgTaken: 0 }; }
 
@@ -17,7 +17,7 @@ var Game = JO.Game = {
   boss: null, bossFight: false, bossDying: false, bossDead: false, objective: '', timescale: 1,
   debug: { god: false, bot: false, speed: 1, errors: [] }
 };
-var pending = [], pickups = [], snap = null, levelSnap = null, acc = 0, last = 0, spawnT = 0, deadT = 0, slowT = 0, supplyT = 0, titleT = 0, muted = false;
+var bossSeen = false, pending = [], pickups = [], snap = null, levelSnap = null, acc = 0, last = 0, spawnT = 0, deadT = 0, slowT = 0, supplyT = 0, titleT = 0, muted = false;
 
 /* ---------- pickups (pooled) ---------- */
 function initPickups(scene) {
@@ -62,7 +62,7 @@ Game.openCrate = function (c) {
   if (Math.random() < 0.5) Game.spawnPickup('armor', c.x, c.z + 2.1);
 };
 Game.onKill = function (e) {
-  Game.stats.kills++;
+  Game.stats.kills++; Ev.emit('kill', e);
   if (e.summoned || Math.random() > e.cfg.drop) return;
   var ar = Wp.slots[0], r = Math.random(), type;
   if (P.hp < P.maxHp * 0.5 && r < 0.55) type = 'health'; else if (ar.reserve < 100) type = 'ammo';
@@ -95,7 +95,9 @@ Game.loadLevel = function (idx) {
   Game.boss = B.create(L.boss);
   levelSnap = snap = takeSnap(0, 3, 1e9);
   setObjective(); UI.setLevelHeader(L); UI.bossBar(null); UI.hud(false);
-  Game.state = 'intro'; UI.showIntro(L, unlock); I.exitLock(); A.setIntensity(-1); UI.refreshTouch();
+  Game.state = 'intro'; I.exitLock(); A.setIntensity(-1); UI.refreshTouch(); bossSeen = false; Ev.emit('level_load', idx);
+  var brief = function () { UI.showIntro(L, unlock); };
+  if (Game.noCut) { Game.noCut = false; brief(); } else { UI.show(null); St.cutscene('l' + (idx + 1) + '_open', brief); }
   Cam.compute(1, 0);
 };
 Game.beginPlay = function () {
@@ -103,32 +105,32 @@ Game.beginPlay = function () {
   Game.state = 'playing'; UI.show(null); UI.hud(true); I.clear(); I.requestLock(); last = performance.now();
 };
 Game.pause = function () {
-  if (Game.state === 'playing') { Game.state = 'paused'; UI.show('scrPause'); I.exitLock(); I.clear(); A.setIntensity(-1); UI.refreshTouch(); }
-  else if (Game.state === 'paused') Game.beginPlay();
+  if (Game.state === 'playing') { Game.state = 'paused'; St.pause(true); UI.show('scrPause'); I.exitLock(); I.clear(); A.setIntensity(-1); UI.refreshTouch(); }
+  else if (Game.state === 'paused') { St.pause(false); Game.beginPlay(); }
 };
 Game.toTitle = function () {
-  Game.state = 'title'; UI.hud(false); UI.show('scrTitle'); I.exitLock(); A.setIntensity(-1); A.setAmbient(false); A.setDrone(0); P.model.g.visible = false; UI.refreshTouch();
+  St.reset(); Game.state = 'title'; UI.hud(false); UI.show('scrTitle'); I.exitLock(); A.setIntensity(-1); A.setAmbient(false); A.setDrone(0); P.model.g.visible = false; UI.refreshTouch();
 };
-Game.onPlayerDead = function () { Game.state = 'dying'; deadT = 1.5; Game.timescale = 1; slowT = 0; };
+Game.onPlayerDead = function () { Ev.emit('player_dead'); Game.state = 'dying'; deadT = 1.5; Game.timescale = 1; slowT = 0; };
 Game.retryCheckpoint = function () {
-  E.reset(); H.reset(); FX.reset(); UI.clearFloat(); I.clear();
+  St.clear(); St.endCine(); Ev.emit('retry'); E.reset(); H.reset(); FX.reset(); UI.clearFloat(); I.clear();
   Wp.restore(snap.w); P.armor = snap.armor; P.hp = P.maxHp; P.place(snap.x, snap.z); P.invuln = 2;      // brief spawn protection
   buildPending(snap.cpZ); Game.bossFight = Game.bossDying = false; Game.timescale = 1; slowT = 0; supplyT = 12;
   if (!Game.bossDead) { Game.boss = B.create(CFG.LEVELS[Game.levelIdx].boss); W.resetBarriers(); }
   UI.bossBar(null); setObjective(); Game.beginPlay();
 };
-Game.restartLevel = function () { Wp.restore(levelSnap.w); P.armor = levelSnap.armor; Game.loadLevel(Game.levelIdx); };
+Game.restartLevel = function () { Game.noCut = true; Wp.restore(levelSnap.w); P.armor = levelSnap.armor; Game.loadLevel(Game.levelIdx); };
 
 function startBoss() {
   Game.bossFight = true; W.setBarrier('entry', false); A.play('gate'); Game.boss.start(); UI.bossBar(Game.boss); setObjective();
-  A.setIntensity(1); pending.length = 0; E.clearRegulars(true); UI.banner(Game.boss.name, 2.6, true); supplyT = 18;
+  A.setIntensity(1); pending.length = 0; E.clearRegulars(true); supplyT = 18; Ev.emit('boss_start', Game.boss, !bossSeen); if (bossSeen) UI.banner(Game.boss.name, 2.6, true); bossSeen = true;
 }
 Game.onBossDying = function (b) {
-  Game.bossDying = true; H.reset(); FX.clearBullets(); E.clearRegulars(true);
+  Game.bossDying = true; Ev.emit('boss_dying', b); H.reset(); FX.clearBullets(); E.clearRegulars(true);
   Game.timescale = b.kind === 'commander' ? 0.2 : 0.45; slowT = b.kind === 'commander' ? 2.0 : 0.7;     // slow-motion final hit
 };
 Game.onBossDead = function (b) {
-  Game.bossDying = false; Game.bossDead = true; Game.bossFight = false; Game.stats.kills++; Game.timescale = 1; slowT = 0;
+  Ev.emit('boss_dead', b); Game.bossDying = false; Game.bossDead = true; Game.bossFight = false; Game.stats.kills++; Game.timescale = 1; slowT = 0;
   W.setBarrier('entry', true); W.setBarrier('exit', true); W.flag.grp.visible = true; UI.bossBar(null); setObjective();
   A.setIntensity(0); A.play('gate'); A.play('checkpoint'); UI.banner(b.name + ' DEFEATED — REACH THE FLAG', 3.5, false);
   Game.spawnPickup('health', b.pos.x + 1.5, b.pos.z); Game.spawnPickup('ammo', b.pos.x - 1.5, b.pos.z);
@@ -137,12 +139,12 @@ function completeLevel() {
   var t = Game.total, s = Game.stats; t.time += s.time; t.kills += s.kills; t.shots += s.shots; t.hits += s.hits; t.dmgTaken += s.dmgTaken;
   I.exitLock(); I.clear(); UI.hud(false); A.play('win'); A.setIntensity(-1); A.setDrone(0);
   var L = CFG.LEVELS[Game.levelIdx];
+  St.clear(); Ev.emit('level_complete', Game.levelIdx);
   if (Game.levelIdx >= CFG.LEVELS.length - 1) { Game.state = 'win'; UI.showWin(t); UI.refreshTouch(); return; }
-  Game.state = 'done';
+  Game.state = 'done'; UI.refreshTouch();
   var pool = CFG.UPGRADES.slice(), choices = [];
   while (choices.length < 3) choices.push(pool.splice((Math.random() * pool.length) | 0, 1)[0]);
-  UI.showDone(L, s, choices, function (id) { A.play('ui'); P.applyUpgrade(id); Game.loadLevel(Game.levelIdx + 1); });
-  UI.refreshTouch();
+  St.cutscene('l' + (Game.levelIdx + 1) + '_close', function () { UI.showDone(L, s, choices, function (id) { A.play('ui'); P.applyUpgrade(id); Game.loadLevel(Game.levelIdx + 1); }); });
 }
 Game.completeLevel = completeLevel;
 
@@ -151,6 +153,7 @@ function step(dt) {
   if (Game.state === 'dying') { deadT -= dt; if (deadT <= 0) { Game.state = 'dead'; I.exitLock(); A.setIntensity(-1); UI.hud(false); UI.refreshTouch();
     UI.showDead(Game.bossFight ? Game.boss.name + ' still stands. You will restart at the arena gate.' : 'The jungle keeps what it takes. Your last checkpoint is waiting.'); return; } }
   if (Game.debug.bot) bot(dt);
+  if (St.cine) { I.moveX = I.moveY = 0; I.fire = I.ads = I.sprint = false; I.jumpPressed = I.rollPressed = false; P.invuln = Math.max(P.invuln, 0.3); if (Game.boss && Game.boss.state === 'intro') Game.boss.stateT = Math.max(Game.boss.stateT, St.cine.t); }
   Cam.compute(1, 0);
   P.update(dt); Wp.update(dt);
   Game.stats.time += dt;
@@ -166,7 +169,7 @@ function step(dt) {
     W.setCheckpointReached(cp); P.hp = Math.min(P.maxHp, P.hp + CFG.PLAYER.checkpointHeal);
     if (Wp.slots[0].reserve < CFG.PLAYER.checkpointAmmo) Wp.slots[0].reserve = CFG.PLAYER.checkpointAmmo;      // flags double as a rifle resupply
     snap = takeSnap(0, cp.z + 1.5, cp.z);
-    A.play('checkpoint'); UI.banner('CHECKPOINT — HEALED AND RESUPPLIED', 2.2, false); }
+    A.play('checkpoint'); UI.banner('CHECKPOINT — HEALED AND RESUPPLIED', 2.2, false); Ev.emit('checkpoint', Game.levelIdx, c); }
   if (!Game.bossFight && !Game.bossDead && P.pos.z < W.A0 - 5) startBoss();
   if (Game.bossDead && Math.hypot(P.pos.x - W.flag.x, P.pos.z - W.flag.z) < 2.8) { completeLevel(); I.endStep(); return; }
 
@@ -202,9 +205,10 @@ function tick(real) {
     if (cam.fov !== 65) { cam.fov = 65; cam.updateProjectionMatrix(); }
     W.update(real); W.updateSun(0, z - 10);
   } else {
-    Cam.compute(alpha, real); Cam.apply(cam); P.animate(fdt); P.model.g.visible = Cam.dist > 1.25; W.update(fdt); FX.update(fdt, W.time); W.updateSun(P.pos.x, P.pos.z);
+    Cam.compute(alpha, real); if (!St.cineCamera(cam, real * Math.max(1, Game.debug.speed || 1))) Cam.apply(cam); P.animate(fdt); P.model.g.visible = Cam.dist > 1.25; W.update(fdt); FX.update(fdt, W.time); W.updateSun(P.pos.x, P.pos.z);
     UI.update(real, cam);
   }
+  if (Game.state !== 'paused') St.update(real); St.cutUpdate(real);
   A.update(real);
   if (dbgOn) { dbgT -= real; if (dbgT <= 0) { dbgT = 0.2; debugOverlay(real); } }
   if (!Game.debug.noRender) W.renderer.render(W.scene, cam);
@@ -240,7 +244,7 @@ Game.toggleDebug = function (on) {
 function bind(id, fn) { document.getElementById(id).addEventListener('click', function (e) { A.init(); A.play('ui'); fn(e); }); }
 Game.init = function () {
   var canvas = document.getElementById('game');
-  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas);
+  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas); St.init();
   FX.pMat.uniforms.uScale.value = window.innerHeight;
   W.build(CFG.LEVELS[0]); P.model.g.visible = false;                       // title backdrop
   // models load behind the title screen; whatever fails simply stays primitive
@@ -265,7 +269,7 @@ Game.init = function () {
   bind('btnStart', function () { Game.startRun(0); });
   bind('btnControls', function () { UI.show('scrControls'); });
   bind('btnControlsBack', function () { UI.show('scrTitle'); });
-  bind('btnDeploy', function () { Game.beginPlay(); UI.banner(CFG.LEVELS[Game.levelIdx].name, 2.2, false); });
+  bind('btnDeploy', function () { Game.beginPlay(); UI.banner(CFG.LEVELS[Game.levelIdx].name, 2.2, false); Ev.emit('level_start', Game.levelIdx); });
   bind('btnResume', function () { pauseAt = performance.now(); Game.pause(); });
   bind('btnPauseRestart', Game.restartLevel); bind('btnPauseQuit', Game.toTitle);
   bind('btnRetry', Game.retryCheckpoint); bind('btnRestart', Game.restartLevel); bind('btnQuit', Game.toTitle);

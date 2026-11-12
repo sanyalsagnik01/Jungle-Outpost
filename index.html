@@ -77,6 +77,7 @@ canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block}
   clip-path:polygon(50% 0,100% 100%,0 100%)}
 .dnum{position:absolute;left:0;top:0;font-family:var(--head);font-size:18px;color:#fff;text-shadow:0 2px 0 #000;
   will-change:transform,opacity;opacity:0;white-space:nowrap}
+.dnum.bark{color:#e9e4cf;font-family:var(--mono);font-size:12px;background:rgba(0,0,0,.55);padding:1px 6px}
 .dnum.head{color:var(--amber);font-size:24px}.dnum.crit{color:#ff8a2a;font-size:26px}.dnum.blk{color:#9ab;font-size:14px}
 #topR{position:fixed;right:14px;top:14px;display:flex;gap:8px;z-index:30}
 #topR button{pointer-events:auto;width:40px;height:40px;background:rgba(8,14,8,.7);border:1px solid rgba(255,255,255,.3);
@@ -89,6 +90,33 @@ canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block}
 #loadFill{display:block;height:100%;background:var(--amber);transform:scaleX(0);transform-origin:left center;transition:transform .2s}
 .btn:disabled{opacity:.4;cursor:wait;transform:none}
 #dbg{position:fixed;left:14px;top:110px;z-index:35;margin:0;padding:10px 12px;background:rgba(0,0,0,.72);border-left:3px solid var(--cyan);color:#cfeee8;font:11px/1.45 var(--mono);pointer-events:none;white-space:pre;max-width:46vw;overflow:hidden}
+
+/* ---------- story: dialogue, barks, boss card, cutscenes ---------- */
+#dlg{position:fixed;left:50%;bottom:132px;transform:translateX(-50%);width:min(640px,92vw);display:flex;gap:12px;align-items:flex-start;z-index:25;pointer-events:auto;cursor:pointer;
+  padding:10px 14px;background:linear-gradient(180deg,rgba(8,14,8,.88),rgba(8,14,8,.72));border-left:3px solid var(--amber);clip-path:polygon(0 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%)}
+#dlgPic{flex:0 0 60px;height:60px;background-size:cover;border:2px solid var(--amber);image-rendering:pixelated}
+#dlgName{font-family:var(--head);letter-spacing:3px;font-size:15px}
+#dlgText{font-size:calc(16px * var(--sub,1));line-height:1.35;min-height:2.7em;color:var(--bone);text-shadow:0 1px 0 #000}
+#dlg small{position:absolute;right:16px;top:8px;font-family:var(--mono);font-size:9px;letter-spacing:2px;opacity:.5}
+#bark{position:fixed;left:0;right:0;bottom:104px;text-align:center;font-family:var(--mono);font-size:calc(12px * var(--sub,1));letter-spacing:1px;color:#cfcab0;text-shadow:0 1px 0 #000;opacity:0;transition:opacity .2s;z-index:24;pointer-events:none}
+body.cine #hud{opacity:0}
+#card{position:fixed;left:0;right:0;bottom:34%;text-align:center;z-index:26;pointer-events:none}
+#card:before,#card:after{content:"";position:fixed;left:0;right:0;height:11vh;background:#000}#card:before{top:0}#card:after{bottom:0}
+#cardName{font-family:var(--head);font-size:clamp(40px,8vw,92px);letter-spacing:10px;color:var(--red);text-shadow:0 5px 0 #000,0 0 40px rgba(255,60,40,.6);transform:translateX(-40px);opacity:0;transition:transform .5s cubic-bezier(.2,.9,.3,1),opacity .4s}
+#cardTag{font-family:var(--mono);letter-spacing:6px;font-size:13px;color:var(--bone);opacity:0;transition:opacity .6s .35s}
+#card.in #cardName{transform:none;opacity:1}#card.in #cardTag{opacity:.9}
+#cut{background:#050805;z-index:60;padding:2vh 2vw}
+#cutPanel{position:relative;width:min(94vw,150vh);aspect-ratio:16/9;max-height:72vh;overflow:hidden;border:6px solid var(--bone);box-shadow:10px 12px 0 #000,0 0 0 2px #000;background:#000}
+#cutArt{position:absolute;inset:0;width:100%;height:100%}
+#cutPanel:after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(0,0,0,.33) 1px,transparent 1.6px);background-size:5px 5px;mix-blend-mode:multiply;pointer-events:none}
+@keyframes pan0{from{transform:scale(1.08) translate(-2%,1%)}to{transform:scale(1.2) translate(2%,-1%)}}
+@keyframes pan1{from{transform:scale(1.2) translate(2%,0)}to{transform:scale(1.08) translate(-2%,0)}}
+@keyframes pan2{from{transform:scale(1.06) translate(0,2%)}to{transform:scale(1.18) translate(0,-2%)}}
+#cutArt.pan0{animation:pan0 9s linear forwards}#cutArt.pan1{animation:pan1 9s linear forwards}#cutArt.pan2{animation:pan2 9s linear forwards}
+#cutCap{width:min(880px,92vw);min-height:4.4em;margin-top:18px;padding:12px 18px;background:var(--bone);color:#14110c;font-size:calc(18px * var(--sub,1));line-height:1.4;text-align:left;box-shadow:6px 6px 0 #000;font-family:var(--body)}
+#cutBar{display:flex;gap:10px;align-items:center;margin-top:10px;font-family:var(--mono);font-size:11px;letter-spacing:3px}
+#cutBar .btn{min-width:0;font-size:15px;padding:8px 22px}
+@media (prefers-reduced-motion:reduce){#cutArt{animation:none !important}}
 
 /* ---------- touch ---------- */
 #touch{position:fixed;inset:0;pointer-events:none;z-index:20}
@@ -189,6 +217,15 @@ body.touch #prompt{top:40%}
   <div id="tUse" class="tbtn hidden" data-act="use">USE</div>
 </div>
 
+<div id="dlg" class="hidden"><div id="dlgPic"></div><div><div id="dlgName"></div><div id="dlgText"></div></div><small>ENTER</small></div>
+<div id="bark"></div>
+<div id="card" class="hidden"><div id="cardName"></div><div id="cardTag"></div></div>
+<div id="cut" class="screen hidden">
+  <div id="cutPanel"><canvas id="cutArt" width="960" height="540"></canvas></div>
+  <div id="cutCap"></div>
+  <div id="cutBar"><span id="cutN"></span><button class="btn" id="cutNext">NEXT</button><button class="btn ghost" id="cutSkip">SKIP</button></div>
+</div>
+
 <pre id="dbg" class="hidden"></pre>
 
 <div id="topR">
@@ -198,7 +235,7 @@ body.touch #prompt{top:40%}
 
 <div id="scrTitle" class="screen clear">
   <h1 class="logo">JUNGLE<span>OUTPOST</span></h1>
-  <div class="tag">ONE COMMANDO &middot; THREE BOSSES &middot; NO EXTRACTION UNTIL IT'S DONE</div>
+  <div class="tag">ONE ENGINEER &middot; ONE MISSING SISTER &middot; ONE VALLEY THAT HUMS</div>
   <div id="loadWrap"><div id="loadBar"><i id="loadFill"></i></div><div id="loadTxt">LOADING MODELS</div></div>
   <button class="btn" id="btnStart">START MISSION</button>
   <button class="btn ghost" id="btnControls">CONTROLS</button>
@@ -264,7 +301,9 @@ body.touch #prompt{top:40%}
 <script src="lib/SkeletonUtils.js"></script>
 <script src="models/models.bundle.js"></script>
 <script src="js/config.js"></script>
+<script src="js/events.js"></script>
 <script src="js/audio.js"></script>
+<script src="js/story.data.js"></script>
 <script src="js/input.js"></script>
 <script src="js/world.js"></script>
 <script src="js/fx.js"></script>
@@ -275,6 +314,7 @@ body.touch #prompt{top:40%}
 <script src="js/enemies.js"></script>
 <script src="js/bosses.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/story.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

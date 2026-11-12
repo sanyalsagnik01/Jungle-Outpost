@@ -80,6 +80,7 @@ var S = {
   minigun: function (v) { noise({ dur: 0.06, vol: 0.34 * v, f: 2000, f2: 500 }); tone({ f: 140, f2: 70, dur: 0.05, vol: 0.2 * v }); },
   spinup: function (v) { tone({ f: 120, f2: 620, dur: 0.75, vol: 0.25 * v, type: 'sawtooth', a: 0.1 }); },
   gas: function (v) { noise({ dur: 0.7, vol: 0.25 * v, f: 2400, f2: 700, type: 'bandpass', a: 0.1 }); },
+  radio: function (v) { noise({ dur: 0.05, vol: 0.12 * v, f: 3200, type: 'bandpass', q: 2 }); tone({ f: 1500, dur: 0.03, vol: 0.08 * v, delay: 0.04 }); },
   ui: function (v) { tone({ f: 660, dur: 0.05, vol: 0.2 * v }); },
   jump: function (v) { noise({ dur: 0.1, vol: 0.12 * v, f: 700 }); },
   roll: function (v) { noise({ dur: 0.25, vol: 0.2 * v, f: 500, f2: 1400, type: 'bandpass' }); },
@@ -93,6 +94,8 @@ A.play = function (name, vol) {
   var now = ctx.currentTime; if (last[name] && now - last[name] < 0.035) return; last[name] = now;
   try { S[name](vol === undefined ? 1 : vol); } catch (e) { /* audio is never fatal */ }
 };
+// short pitched blip: the stand-in for a voice line that has no audio file
+A.blip = function (f, dur, vol, delay) { if (!ctx || A.muted) return; try { tone({ f: f, f2: f * 0.92, dur: dur || 0.05, vol: 0.09 * (vol === undefined ? 1 : vol), type: 'square', delay: delay || 0 }); } catch (e) { /* never fatal */ } };
 // positional falloff relative to the player
 A.playAt = function (name, x, z, vol) {
   var P = JO.Player; if (!P) return A.play(name, vol);
