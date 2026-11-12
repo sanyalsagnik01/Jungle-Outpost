@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>JUNGLE OUTPOST</title>
+<style>
+:root{
+  --amber:#ffb62e; --amber-d:#b97a0a; --ink:#0c120c; --olive:#1b2a1a; --olive-l:#2f4a2c;
+  --bone:#e9e4cf; --red:#ff4a3a; --cyan:#58e0d0; --blue:#5aa8ff;
+  --head:"Impact","Haettenschweiler","Arial Narrow Bold","Franklin Gothic Bold",sans-serif;
+  --body:"Trebuchet MS","Segoe UI",system-ui,sans-serif;
+  --mono:"Consolas","Menlo","DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#060a06;color:var(--bone);font-family:var(--body);
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block}
+.hidden{display:none !important}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;pointer-events:none;font-family:var(--mono)}
+.panel{position:absolute;padding:10px 14px;background:linear-gradient(180deg,rgba(8,14,8,.72),rgba(8,14,8,.5));
+  border-left:3px solid var(--amber);clip-path:polygon(0 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%)}
+#hudTL{left:14px;top:14px;min-width:230px}
+#hudLevel{font-family:var(--head);font-size:20px;letter-spacing:2px;color:var(--amber)}
+#hudObj{font-size:13px;margin-top:3px;color:var(--bone)}
+#hudObj b{color:var(--cyan);font-weight:normal}
+#hudKills{font-size:12px;margin-top:3px;opacity:.75}
+#hudBL{left:14px;bottom:14px;width:270px}
+.bar{position:relative;height:14px;background:rgba(0,0,0,.55);margin:5px 0;border:1px solid rgba(255,255,255,.14)}
+.bar i{position:absolute;left:0;top:0;bottom:0;width:100%;transform-origin:left center;display:block}
+.bar span{position:absolute;right:5px;top:-1px;font-size:11px;line-height:14px;text-shadow:0 1px 0 #000}
+.bar em{position:absolute;left:5px;top:-1px;font-size:10px;line-height:14px;font-style:normal;letter-spacing:1px;opacity:.85;text-shadow:0 1px 0 #000}
+#hpFill{background:linear-gradient(90deg,#c22b1c,#ff5a3c)}
+#arFill{background:linear-gradient(90deg,#2b6fc2,#6ab6ff)}
+#stFill{background:linear-gradient(90deg,#b98a0a,#ffd24a)}
+.bar.thin{height:7px}
+#hudBR{right:14px;bottom:14px;text-align:right;border-left:none;border-right:3px solid var(--amber);min-width:210px;
+  clip-path:polygon(0 0,100% 0,100% 100%,10px 100%,0 calc(100% - 10px))}
+#wName{font-family:var(--head);letter-spacing:2px;font-size:16px;color:var(--amber)}
+#wAmmo{font-size:34px;line-height:1;margin-top:2px}
+#wAmmo small{font-size:15px;opacity:.7}
+#slots{margin-top:6px;font-size:11px}
+#slots span{display:inline-block;padding:2px 6px;margin-left:4px;border:1px solid rgba(255,255,255,.25);opacity:.55}
+#slots span.on{background:var(--amber);color:#111;opacity:1;border-color:var(--amber)}
+#slots span.lock{opacity:.2;text-decoration:line-through}
+#bossWrap{position:absolute;left:50%;top:16px;transform:translateX(-50%);width:min(520px,40vw);text-align:center}
+#bossName{font-family:var(--head);letter-spacing:5px;font-size:20px;color:var(--red);text-shadow:0 2px 0 #000}
+#bossBar{height:16px;background:rgba(0,0,0,.65);border:1px solid rgba(255,90,70,.6);position:relative;margin-top:3px}
+#bossFill{position:absolute;inset:0;background:linear-gradient(90deg,#8a1208,#ff4a3a 70%,#ffb08a);transform-origin:left center}
+#bossBar .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;opacity:.8}
+#bossPhase{font-size:11px;letter-spacing:3px;margin-top:3px;opacity:.9}
+#banner{position:absolute;left:0;right:0;top:22%;text-align:center;font-family:var(--head);font-size:30px;letter-spacing:6px;
+  color:var(--amber);text-shadow:0 3px 0 #000,0 0 22px rgba(255,160,0,.5);opacity:0;transition:opacity .25s}
+#banner.red{color:var(--red);text-shadow:0 3px 0 #000,0 0 22px rgba(255,60,40,.6)}
+#prompt{position:absolute;left:0;right:0;top:62%;text-align:center;font-size:14px;letter-spacing:1px}
+#prompt kbd{background:var(--amber);color:#111;padding:1px 7px;font-family:var(--mono);font-weight:bold}
+#reloadTxt{position:absolute;left:0;right:0;top:56%;text-align:center;font-size:12px;letter-spacing:4px;color:var(--amber)}
+#cross{position:absolute;left:50%;top:50%;width:0;height:0}
+#cross i{position:absolute;background:#fff;box-shadow:0 0 2px #000}
+#cross .l,#cross .r{width:9px;height:2px;top:-1px}
+#cross .u,#cross .d{width:2px;height:9px;left:-1px}
+#cross .c{width:2px;height:2px;left:-1px;top:-1px;opacity:.9}
+#hitm{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;opacity:0}
+#hitm:before,#hitm:after{content:"";position:absolute;left:12px;top:0;width:2px;height:26px;background:#fff}
+#hitm:before{transform:rotate(45deg)}#hitm:after{transform:rotate(-45deg)}
+#hitm.head:before,#hitm.head:after{background:var(--amber);width:3px}
+#hitm.kill:before,#hitm.kill:after{background:var(--red);width:3px}
+#vignette{position:fixed;inset:0;pointer-events:none;opacity:0;
+  background:radial-gradient(ellipse at center,rgba(255,0,0,0) 45%,rgba(200,10,0,.75) 100%)}
+#lowhp{position:fixed;inset:0;pointer-events:none;opacity:0;
+  background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(120,0,0,.55) 100%)}
+#inds{position:absolute;left:50%;top:50%;width:0;height:0}
+#inds i{position:absolute;left:-40px;top:-150px;width:80px;height:26px;opacity:0;transform-origin:40px 150px;
+  background:radial-gradient(ellipse at 50% 100%,rgba(255,60,40,.95),rgba(255,60,40,0) 70%);
+  clip-path:polygon(50% 0,100% 100%,0 100%)}
+.dnum{position:absolute;left:0;top:0;font-family:var(--head);font-size:18px;color:#fff;text-shadow:0 2px 0 #000;
+  will-change:transform,opacity;opacity:0;white-space:nowrap}
+.dnum.head{color:var(--amber);font-size:24px}.dnum.crit{color:#ff8a2a;font-size:26px}.dnum.blk{color:#9ab;font-size:14px}
+#topR{position:fixed;right:14px;top:14px;display:flex;gap:8px;z-index:30}
+#topR button{pointer-events:auto;width:40px;height:40px;background:rgba(8,14,8,.7);border:1px solid rgba(255,255,255,.3);
+  color:var(--bone);font-size:18px;cursor:pointer}
+#topR button:focus-visible{outline:2px solid var(--amber)}
+
+/* ---------- touch ---------- */
+#touch{position:fixed;inset:0;pointer-events:none;z-index:20}
+#touch .zone{position:absolute;bottom:0;top:0;pointer-events:auto}
+#joyZone{left:0;width:42%}#lookZone{right:0;width:58%}
+#joyBase{position:absolute;width:120px;height:120px;border-radius:50%;border:2px solid rgba(255,255,255,.35);
+  background:rgba(0,0,0,.2);left:40px;bottom:50px}
+#joyKnob{position:absolute;width:54px;height:54px;border-radius:50%;background:rgba(255,182,46,.75);left:33px;top:33px}
+.tbtn{position:absolute;pointer-events:auto;width:60px;height:60px;border-radius:50%;border:2px solid rgba(255,255,255,.4);
+  background:rgba(10,16,10,.45);color:#fff;font-family:var(--head);font-size:13px;letter-spacing:1px;
+  display:flex;align-items:center;justify-content:center}
+.tbtn.act{background:rgba(255,182,46,.6)}
+#tFire{right:26px;bottom:96px;width:84px;height:84px;background:rgba(200,40,20,.45);font-size:16px}
+#tJump{right:124px;bottom:40px}#tRoll{right:126px;bottom:124px}#tReload{right:34px;bottom:196px}
+#tAds{right:204px;bottom:70px}#tSwap{right:120px;bottom:206px}#tUse{right:210px;bottom:160px}
+
+/* ---------- screens ---------- */
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:40;
+  background:radial-gradient(ellipse at 50% 40%,rgba(14,26,14,.72),rgba(3,6,3,.94));text-align:center;padding:20px;overflow:auto}
+.screen.clear{background:radial-gradient(ellipse at 50% 45%,rgba(8,14,8,.35),rgba(3,6,3,.85))}
+h1.logo{font-family:var(--head);font-size:clamp(46px,10vw,118px);line-height:.9;margin:0;letter-spacing:6px;color:var(--amber);
+  text-shadow:0 5px 0 #5a3a00,0 10px 30px rgba(0,0,0,.8)}
+h1.logo span{display:block;color:var(--bone);font-size:.42em;letter-spacing:.62em;margin-left:.62em;text-shadow:0 3px 0 #000}
+.tag{letter-spacing:5px;font-size:12px;opacity:.8;margin:16px 0 26px;font-family:var(--mono)}
+h2{font-family:var(--head);font-size:clamp(32px,6vw,62px);letter-spacing:6px;margin:0 0 8px;color:var(--amber);text-shadow:0 4px 0 #000}
+h2.red{color:var(--red)}
+h3{font-family:var(--mono);font-weight:normal;letter-spacing:5px;font-size:13px;margin:0 0 6px;opacity:.8}
+.btn{pointer-events:auto;font-family:var(--head);font-size:20px;letter-spacing:4px;color:var(--ink);background:var(--amber);border:none;
+  padding:12px 34px;margin:6px;cursor:pointer;min-width:250px;
+  clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);transition:transform .08s,background .15s}
+.btn:hover{background:#ffd070;transform:translateY(-2px)}
+.btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.btn.ghost{background:rgba(233,228,207,.12);color:var(--bone)}
+.btn.ghost:hover{background:rgba(233,228,207,.25)}
+.row{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:8px 0}
+.diff button{pointer-events:auto;font-family:var(--mono);font-size:13px;letter-spacing:3px;padding:8px 18px;background:transparent;
+  color:var(--bone);border:1px solid rgba(233,228,207,.4);cursor:pointer}
+.diff button.on{background:var(--bone);color:var(--ink)}
+.diff button:focus-visible{outline:2px solid var(--amber)}
+.note{font-size:12px;opacity:.7;margin-top:14px;max-width:560px;line-height:1.5}
+.story{max-width:620px;font-size:17px;line-height:1.6;margin:14px 0 20px;color:var(--bone)}
+.unlock{font-family:var(--mono);color:var(--cyan);letter-spacing:2px;font-size:13px;margin-bottom:18px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(110px,1fr));gap:10px;margin:16px 0 22px;font-family:var(--mono)}
+.stats div{background:rgba(0,0,0,.4);padding:10px 12px;border-top:2px solid var(--amber)}
+.stats b{display:block;font-size:24px;color:#fff;font-weight:normal}
+.stats span{font-size:10px;letter-spacing:2px;opacity:.7}
+.cards{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:8px}
+.card{pointer-events:auto;width:200px;padding:16px 14px;background:rgba(20,34,20,.9);border:1px solid rgba(255,182,46,.45);color:var(--bone);
+  cursor:pointer;text-align:left;font-family:var(--body);transition:transform .1s,border-color .1s}
+.card:hover,.card:focus-visible{transform:translateY(-4px);border-color:var(--amber);outline:none;background:rgba(40,60,34,.95)}
+.card b{display:block;font-family:var(--head);font-size:19px;letter-spacing:2px;color:var(--amber);font-weight:normal;margin-bottom:6px}
+.card small{font-size:13px;line-height:1.4;opacity:.85}
+table.ctl{border-collapse:collapse;font-family:var(--mono);font-size:13px;margin:10px 0 16px;text-align:left}
+table.ctl td{padding:4px 14px;border-bottom:1px solid rgba(255,255,255,.1)}
+table.ctl td:first-child{color:var(--amber);white-space:nowrap}
+body.touch #hudBL{bottom:auto;top:98px;width:200px;padding:6px 10px}
+body.touch #hudBR{bottom:auto;top:64px;padding:6px 12px}
+body.touch #wAmmo{font-size:24px}
+body.touch #bossWrap{top:104px;width:42vw}
+body.touch #prompt{top:40%}
+@media (max-width:1250px){#bossWrap{top:104px;width:min(520px,70vw)}#banner{top:30%}}
+@media (max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}#hudBL{width:190px}#hudTL{min-width:170px}#wAmmo{font-size:26px}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="vignette"></div><div id="lowhp"></div>
+
+<div id="hud" class="hidden">
+  <div id="hudTL" class="panel"><div id="hudLevel"></div><div id="hudObj"></div><div id="hudKills"></div></div>
+  <div id="bossWrap" class="hidden"><div id="bossName"></div><div id="bossBar"><div id="bossFill"></div></div><div id="bossPhase"></div></div>
+  <div id="hudBL" class="panel">
+    <div class="bar"><i id="hpFill"></i><em>HP</em><span id="hpTxt"></span></div>
+    <div class="bar"><i id="arFill"></i><em>ARMOR</em><span id="arTxt"></span></div>
+    <div class="bar thin"><i id="stFill"></i></div>
+  </div>
+  <div id="hudBR" class="panel"><div id="wName"></div><div id="wAmmo"></div>
+    <div id="slots"><span id="s1">1 AR</span><span id="s2">2 SG</span><span id="s3">3 MR</span></div></div>
+  <div id="banner"></div>
+  <div id="reloadTxt" class="hidden">RELOADING</div>
+  <div id="prompt" class="hidden"></div>
+  <div id="inds"></div>
+  <div id="cross"><i class="l"></i><i class="r"></i><i class="u"></i><i class="d"></i><i class="c"></i></div>
+  <div id="hitm"></div>
+  <div id="dnums"></div>
+</div>
+
+<div id="touch" class="hidden">
+  <div id="joyZone" class="zone"><div id="joyBase"><div id="joyKnob"></div></div></div>
+  <div id="lookZone" class="zone"></div>
+  <div id="tFire" class="tbtn" data-act="fire">FIRE</div>
+  <div id="tJump" class="tbtn" data-act="jump">JUMP</div>
+  <div id="tRoll" class="tbtn" data-act="roll">ROLL</div>
+  <div id="tReload" class="tbtn" data-act="reload">LOAD</div>
+  <div id="tAds" class="tbtn" data-act="ads">AIM</div>
+  <div id="tSwap" class="tbtn" data-act="swap">SWAP</div>
+  <div id="tUse" class="tbtn hidden" data-act="use">USE</div>
+</div>
+
+<div id="topR">
+  <button id="btnMute" title="Mute (M)" aria-label="Toggle sound">&#9835;</button>
+  <button id="btnPause" title="Pause (Esc)" aria-label="Pause" class="hidden">II</button>
+</div>
+
+<div id="scrTitle" class="screen clear">
+  <h1 class="logo">JUNGLE<span>OUTPOST</span></h1>
+  <div class="tag">ONE COMMANDO &middot; THREE BOSSES &middot; NO EXTRACTION UNTIL IT'S DONE</div>
+  <button class="btn" id="btnStart">START MISSION</button>
+  <button class="btn ghost" id="btnControls">CONTROLS</button>
+  <div class="row diff" id="diffRow">
+    <button data-d="easy">EASY</button><button data-d="normal" class="on">NORMAL</button><button data-d="hard">HARD</button>
+  </div>
+  <div class="note">Difficulty changes enemy damage and accuracy.</div>
+</div>
+
+<div id="scrControls" class="screen hidden">
+  <h2>CONTROLS</h2>
+  <table class="ctl">
+    <tr><td>W A S D</td><td>Move</td></tr><tr><td>Mouse</td><td>Look / aim</td></tr>
+    <tr><td>Left mouse</td><td>Shoot</td></tr><tr><td>Right mouse</td><td>Aim down sights (zoom, tighter spread)</td></tr>
+    <tr><td>Shift</td><td>Sprint (uses stamina)</td></tr><tr><td>Space</td><td>Jump (clears shockwaves)</td></tr>
+    <tr><td>C or Ctrl</td><td>Roll / dodge &mdash; brief invulnerability</td></tr><tr><td>R</td><td>Reload</td></tr>
+    <tr><td>1 / 2 / 3</td><td>Assault rifle / Shotgun / Marksman rifle</td></tr><tr><td>E</td><td>Open supply crates</td></tr>
+    <tr><td>Esc</td><td>Pause</td></tr><tr><td>M</td><td>Mute</td></tr>
+  </table>
+  <div class="note" style="margin:0 0 14px">Tip: prefer <b>C</b> for rolling &mdash; browsers reserve Ctrl+W to close the tab.<br>
+  On phones and tablets: left thumb moves, right thumb looks, buttons fire / jump / roll / reload.</div>
+  <button class="btn" id="btnControlsBack">BACK</button>
+</div>
+
+<div id="scrIntro" class="screen hidden">
+  <h3 id="introSub"></h3><h2 id="introName"></h2>
+  <div class="story" id="introStory"></div><div class="unlock" id="introUnlock"></div>
+  <button class="btn" id="btnDeploy">DEPLOY</button>
+</div>
+
+<div id="scrPause" class="screen hidden">
+  <h2>PAUSED</h2>
+  <button class="btn" id="btnResume">RESUME</button>
+  <button class="btn ghost" id="btnPauseRestart">RESTART LEVEL</button>
+  <button class="btn ghost" id="btnPauseQuit">QUIT TO TITLE</button>
+  <div class="note">WASD move &middot; Shift sprint &middot; Space jump &middot; C roll &middot; LMB shoot &middot; RMB aim &middot; R reload &middot; 1/2/3 weapons &middot; E interact &middot; M mute</div>
+</div>
+
+<div id="scrDead" class="screen hidden">
+  <h2 class="red">K.I.A.</h2><div class="story" id="deadMsg" style="margin-top:0"></div>
+  <button class="btn" id="btnRetry">RETRY FROM CHECKPOINT</button>
+  <button class="btn ghost" id="btnRestart">RESTART LEVEL</button>
+  <button class="btn ghost" id="btnQuit">QUIT</button>
+</div>
+
+<div id="scrDone" class="screen hidden">
+  <h3 id="doneSub"></h3><h2>LEVEL COMPLETE</h2>
+  <div class="stats" id="doneStats"></div>
+  <h3>CHOOSE ONE FIELD UPGRADE</h3>
+  <div class="cards" id="upCards"></div>
+</div>
+
+<div id="scrWin" class="screen hidden">
+  <h3>THE OUTPOST HAS FALLEN</h3><h2>MISSION ACCOMPLISHED</h2>
+  <div class="story" style="margin:6px 0">The Commander's walker burns in the courtyard. Extraction is inbound.</div>
+  <div class="stats" id="winStats"></div>
+  <button class="btn" id="btnAgain">PLAY AGAIN</button>
+</div>
+
+<script src="lib/three.min.js"></script>
+<script>window.THREE||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');</script>
+<script src="js/config.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/input.js"></script>
+<script src="js/world.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/models.js"></script>
+<script src="js/player.js"></script>
+<script src="js/hazards.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/bosses.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
