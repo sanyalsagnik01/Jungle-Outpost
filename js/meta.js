@@ -20,7 +20,7 @@ var $ = function (id) { return document.getElementById(id); };
 var DEF = { sens: 1, invertY: false, volume: 1, music: 1, subSize: 1, colorblind: false, reduceShake: false, reduceFlash: false, aimAssist: false, adaptive: true, hitStop: true, minimap: true, weather: true, fps: false, keys: {} };
 var ACTIONS = [['forward', 'Move forward', 'KeyW'], ['back', 'Move back', 'KeyS'], ['left', 'Move left', 'KeyA'], ['right', 'Move right', 'KeyD'], ['sprint', 'Sprint', 'ShiftLeft'], ['jump', 'Jump', 'Space'],
   ['roll', 'Roll / dodge', 'KeyC'], ['crouch', 'Crouch', 'KeyX'], ['reload', 'Reload', 'KeyR'], ['interact', 'Interact', 'KeyE'], ['melee', 'Takedown / finish', 'KeyF'], ['frag', 'Frag grenade', 'KeyG'],
-  ['smoke', 'Smoke grenade', 'KeyQ'], ['bench', 'Field bench', 'KeyB'], ['codex', 'Codex', 'KeyJ'], ['mute', 'Mute', 'KeyM']];
+  ['smoke', 'Smoke grenade', 'KeyQ'], ['light', 'Flashlight', 'KeyL'], ['leanL', 'Lean left', 'KeyZ'], ['leanR', 'Lean right', 'KeyV'], ['wipe', 'Wipe the lens', 'KeyT'], ['bench', 'Field bench', 'KeyB'], ['codex', 'Codex', 'KeyJ'], ['mute', 'Mute', 'KeyM']];
 M.ACTIONS = ACTIONS;
 var set = null, listening = null;
 function keyName(c) { return (c || '—').replace(/^Key/, '').replace(/^Digit/, '').replace('ShiftLeft', 'L-SHIFT').replace('ShiftRight', 'R-SHIFT').replace('ControlLeft', 'L-CTRL').replace('Space', 'SPACE').replace(/^Arrow/, 'ARROW ').toUpperCase(); }
@@ -170,7 +170,7 @@ var fpsEl = null, fpsT = 0, fpsN = 0, fpsAcc = 0, worst = 0, combat = 0;
 // per rendered frame
 M.frame = function (real) {
   var G = JO.Game, L = E.list, hot = 0, i;
-  if (G.state === 'playing') { for (i = 0; i < L.length; i++) if (L[i].alive && !L[i].isBoss && L[i].state !== 'patrol') hot++; }
+  if (G.state === 'playing') { for (i = 0; i < L.length; i++) if (L[i].alive && !L[i].isBoss && L[i].state !== 'patrol' && L[i].state !== 'surrender') hot++; }
   combat += ((hot > 0 ? Math.min(1, 0.45 + hot * 0.12) : 0) - combat) * Math.min(1, real * (hot ? 2.5 : 0.5)); A.combat = combat;
   A.tense = G.state === 'playing' && JO.Player.hp < JO.Player.maxHp * 0.3;
   if (set && set.fps) { fpsN++; fpsAcc += real; if (real > worst) worst = real; fpsT -= real;

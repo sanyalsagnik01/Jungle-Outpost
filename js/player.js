@@ -296,7 +296,7 @@ function shoot(s) {
     E.hitscan(ox, oy, oz, dx, dy, dz, c.range, HIT);
     var ex = ox + dx * HIT.t, ey = oy + dy * HIT.t, ez = oz + dz * HIT.t;
     FX.tracer(mx, my, mz, ex, ey, ez, bolt ? 0x9adfff : (c.id === 'mr' ? 0xffffff : 0xffe9a0), c.id === 'mr' || bolt ? 0.06 : 0.035, bolt ? 0.3 : (c.id === 'mr' ? 0.16 : 0.08));
-    JO.Props.shot(ox, oy, oz, dx, dy, dz, HIT.t, c);
+    JO.Props.shot(ox, oy, oz, dx, dy, dz, HIT.t, c); if (JO.Squad) JO.Squad.shotRay(ox, oy, oz, dx, dy, dz, HIT.t);
     if (bolt && Pk.mod('xb_boom') && HIT.t < c.range) JO.Arsenal.blast(ex, Math.max(0.3, ey), ez, 3, 60, 0.3);
     if (HIT.enemy) {
       var dmg = c.dmg * Pk.damage(c, HIT.enemy);

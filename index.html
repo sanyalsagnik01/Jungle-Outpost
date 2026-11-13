@@ -151,7 +151,7 @@ body.paused #dlg,body.paused #bark{visibility:hidden}
 #tJump{right:124px;bottom:40px}#tRoll{right:126px;bottom:124px}#tReload{right:34px;bottom:196px}
 #tAds{right:204px;bottom:70px}#tSwap{right:120px;bottom:206px}#tUse{right:210px;bottom:160px}
 #tNade{right:34px;bottom:270px;width:52px;height:52px;font-size:11px}#tSmoke{right:96px;bottom:280px;width:52px;height:52px;font-size:11px}#tBench{right:210px;bottom:230px}
-#tCrouch{right:204px;bottom:300px;width:52px;height:52px;font-size:11px}
+#tCrouch{right:204px;bottom:300px;width:52px;height:52px;font-size:11px}#tLight{right:150px;bottom:340px;width:52px;height:52px;font-size:11px}
 #compass{position:absolute;left:50%;top:4px;transform:translateX(-50%);width:min(420px,44vw);height:20px;border-bottom:1px solid rgba(255,182,46,.5)}
 #minimap{position:absolute;right:14px;top:64px;width:150px;height:150px}
 body.touch #minimap{width:104px;height:104px;top:60px}
@@ -283,6 +283,7 @@ body.touch #prompt{top:40%}
   <div id="tSmoke" class="tbtn" data-act="smoke">SMOKE</div>
   <div id="tBench" class="tbtn hidden" data-act="bench">BENCH</div>
   <div id="tCrouch" class="tbtn" data-act="crouch">DUCK</div>
+  <div id="tLight" class="tbtn" data-act="light">LAMP</div>
 </div>
 
 <div id="dlg" class="hidden"><div id="dlgPic"></div><div><div id="dlgName"></div><div id="dlgText"></div></div><small>ENTER</small></div>
@@ -331,7 +332,7 @@ body.touch #prompt{top:40%}
     <tr><td>C or Ctrl</td><td>Roll / dodge &mdash; brief invulnerability</td></tr><tr><td>R</td><td>Reload</td></tr>
     <tr><td>1 / 2 / 3</td><td>Assault rifle / Shotgun / Marksman rifle</td></tr><tr><td>4 / 5</td><td>Crossbow (silent) / Flamethrower</td></tr>
     <tr><td>G / Q</td><td>Throw frag grenade / smoke grenade</td></tr><tr><td>B</td><td>Field bench at a reached checkpoint (skills, weapon mods)</td></tr>
-    <tr><td>X</td><td>Crouch: quieter, harder to see</td></tr><tr><td>F</td><td>Silent takedown from behind an unaware enemy</td></tr>
+    <tr><td>X</td><td>Crouch: quieter, harder to see</td></tr><tr><td>L</td><td>Flashlight: lights your way, gives you away</td></tr><tr><td>F</td><td>Silent takedown from behind an unaware enemy</td></tr>
     <tr><td>E</td><td>Also: hack terminals, pull levers, drive the jeep</td></tr><tr><td>E</td><td>Open supply crates</td></tr>
     <tr><td>F4</td><td>Graphics quality: Auto / High / Medium / Low</td></tr><tr><td>Settings</td><td>Every key above can be rebound; sensitivity, volume, subtitles and accessibility live there too</td></tr><tr><td>Esc</td><td>Pause</td></tr><tr><td>M</td><td>Mute</td></tr>
   </table>
@@ -459,6 +460,7 @@ body.touch #prompt{top:40%}
 <script src="js/wildlife.js"></script>
 <script src="js/ambience.js"></script>
 <script src="js/physical.js"></script>
+<script src="js/squad.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

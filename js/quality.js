@@ -90,3 +90,40 @@ Sys.frame = function (dt, real) {
 };
 Sys.get = function (name) { for (var i = 0; i < Sys.list.length; i++) if (Sys.list[i].name === name) return Sys.list[i]; return null; };
 })();
+
+/* ============================================================
+   JO.Lights — the light budget. Real point lights are costly,
+   so there is one small pool (size = JO.Q 'lights'). Every
+   frame the systems that want light (lamps, lanterns, torches,
+   fires) ask for it with Lights.add(); the nearest requests to
+   the camera get the pool, the rest stay as glowing meshes only.
+   Lights fade in and out when the pool changes hands.
+   ============================================================ */
+(function () {
+'use strict';
+var JO = window.JO, Q = JO.Q;
+var Li = JO.Lights = { pool: [], req: [], used: 0, n: 0, asked: 0 };
+var MAX = 6, rn = 0;
+Li.add = function (id, x, y, z, hex, intensity, range, prio) {
+  var r = Li.req[rn] || (Li.req[rn] = {}); rn++; r.id = id; r.x = x; r.y = y; r.z = z; r.hex = hex; r.i = intensity; r.range = range || 10; r.prio = prio || 1; r.score = 0;
+};
+function resize() { Li.n = Math.min(MAX, Q.n('lights')); for (var i = 0; i < MAX; i++) { Li.pool[i].light.visible = i < Li.n; if (i >= Li.n) { Li.pool[i].id = null; Li.pool[i].light.intensity = 0; } } }
+JO.Sys.add('lights', {
+  init: function () { for (var i = 0; i < MAX; i++) { var l = new THREE.PointLight(0xffffff, 0, 10, 1.4); JO.World.scene.add(l); Li.pool.push({ light: l, id: null, cur: 0 }); } resize(); },
+  quality: resize,
+  frame: function (dt, real) {
+    var cam = JO.World.camera.position, i, j, r, p, k = Math.min(1, real * 7); Li.asked = rn;
+    for (i = 0; i < rn; i++) { r = Li.req[i]; r.score = (Math.hypot(r.x - cam.x, r.z - cam.z) + 2) / r.prio; r.taken = false; }
+    // lights that still have their request keep it if it is among the nearest n
+    var order = Li.req.slice(0, rn).sort(function (a, b) { return a.score - b.score; }).slice(0, Li.n);
+    for (j = 0; j < Li.n; j++) { p = Li.pool[j]; p.want = null; for (i = 0; i < order.length; i++) if (order[i].id === p.id && !order[i].taken) { p.want = order[i]; order[i].taken = true; break; } }
+    for (j = 0; j < Li.n; j++) { p = Li.pool[j]; if (p.want) continue; if (p.cur > 0.03) continue;                       // still fading out from its old job
+      for (i = 0; i < order.length; i++) if (!order[i].taken) { p.want = order[i]; p.id = order[i].id; order[i].taken = true; break; } if (!p.want) p.id = null; }
+    Li.used = 0;
+    for (j = 0; j < Li.n; j++) { p = Li.pool[j]; r = p.want;
+      if (r) { p.light.position.set(r.x, r.y, r.z); p.light.color.setHex(r.hex); p.light.distance = r.range; p.cur += (r.i - p.cur) * k; Li.used++; } else p.cur += (0 - p.cur) * k;
+      p.light.intensity = p.cur; }
+    rn = 0;
+  }
+});
+})();

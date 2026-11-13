@@ -9,7 +9,7 @@
 var JO = window.JO;
 var I = JO.Input = {
   moveX: 0, moveY: 0, fire: false, ads: false, sprint: false,
-  jumpPressed: false, rollPressed: false, reloadPressed: false, interactPressed: false, meleePressed: false, nadePressed: false, smokePressed: false, benchPressed: false, crouchPressed: false, weapon: 0,
+  jumpPressed: false, rollPressed: false, reloadPressed: false, interactPressed: false, meleePressed: false, nadePressed: false, smokePressed: false, benchPressed: false, crouchPressed: false, lightPressed: false, wipePressed: false, weapon: 0,
   locked: false, isTouch: false, keys: {}, joy: { x: 0, y: 0 }, external: false,
   onLook: null, onPause: null, onLockLost: null, onMute: null, onCanvasClick: null,
   translate: function (code) { return code; }
@@ -38,6 +38,8 @@ I.init = function (cv) {
     else if (c === 'KeyQ') I.smokePressed = true;
     else if (c === 'KeyB') I.benchPressed = true;
     else if (c === 'KeyX') I.crouchPressed = true;
+    else if (c === 'KeyL') I.lightPressed = true;
+    else if (c === 'KeyT') I.wipePressed = true;
     else if (c === 'Escape' || c === 'KeyP') { if (I.onPause) I.onPause(); }
     else if (c === 'KeyM') { if (I.onMute) I.onMute(); }
   });
@@ -79,7 +81,7 @@ I.poll = function () {
   I.sprint = !!(K.ShiftLeft || K.ShiftRight) || Math.hypot(I.joy.x, I.joy.y) > 0.93;
 };
 I.endStep = function () {
-  I.jumpPressed = I.rollPressed = I.reloadPressed = I.interactPressed = I.meleePressed = I.nadePressed = I.smokePressed = I.benchPressed = I.crouchPressed = false; I.weapon = 0;
+  I.jumpPressed = I.rollPressed = I.reloadPressed = I.interactPressed = I.meleePressed = I.nadePressed = I.smokePressed = I.benchPressed = I.crouchPressed = I.lightPressed = I.wipePressed = false; I.weapon = 0;
   if (fireEnd) { I.fire = false; fireEnd = false; }
 };
 I.clear = function () { fireEnd = false; I.fire = false; I.ads = false; I.joy.x = I.joy.y = 0; I.endStep(); for (var k in K) K[k] = false; };
@@ -125,7 +127,7 @@ function setupTouch() {
       else if (act === 'jump') I.jumpPressed = true; else if (act === 'roll') I.rollPressed = true;
       else if (act === 'reload') I.reloadPressed = true; else if (act === 'use') I.interactPressed = true;
       else if (act === 'swap') I.weapon = -1;
-      else if (act === 'nade') I.nadePressed = true; else if (act === 'smoke') I.smokePressed = true; else if (act === 'bench') I.benchPressed = true; else if (act === 'crouch') I.crouchPressed = true;
+      else if (act === 'nade') I.nadePressed = true; else if (act === 'smoke') I.smokePressed = true; else if (act === 'bench') I.benchPressed = true; else if (act === 'crouch') I.crouchPressed = true; else if (act === 'light') I.lightPressed = true;
       else if (act === 'ads') { I.ads = !I.ads; }
     }, { passive: false });
     el.addEventListener('touchmove', function (e) { if (act === 'fire') lookMove(e); }, { passive: false });

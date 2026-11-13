@@ -211,7 +211,7 @@ function step(dt) {
   Game.stats.time += dt;
 
   spawnT -= dt;
-  if (spawnT <= 0 && !Game.bossFight && !Game.bossDead) { spawnT = 0.15; var n = E.count();
+  if (spawnT <= 0 && !Game.bossFight && !Game.bossDead && !Game.debug.noSpawn) { spawnT = 0.15; var n = E.count();
     for (var i = 0; i < pending.length && n < CFG.MAX_ACTIVE; i++) { var s = pending[i]; if (P.pos.z > s.trig) continue;
       E.spawn(s.type, s.x, s.z, s.type === 'sniper' ? { y: 4.88, alt: s.alt } : null); pending.splice(i, 1); i--; n++; } }
   E.update(dt); H.update(dt); Ar.update(dt); Sl.update(dt); Pr.update(dt); FX.updateBullets(dt); updatePickups(dt); JO.Codex.update(dt); JO.Sys.step(dt);

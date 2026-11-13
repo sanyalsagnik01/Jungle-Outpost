@@ -115,6 +115,7 @@ EP.spawn = function (x, z, o) {
   if (this.type === 'drone') this.pos.y = 4;
   for (var i = 0; i < this.mats.length; i++) { var m = this.mats[i]; m.transparent = false; m.opacity = 1; m.emissive.setHex(0); m.needsUpdate = true; }
   this.emis = 0; this.mesh.visible = true; this.mesh.rotation.set(0, this.yaw, 0); this.mesh.position.copy(this.pos); this.mesh.scale.setScalar(1);
+  this.actInit = false; this.act = ''; this.actK = 1; this.inv = null; this.lantern = false; this.surrendered = false; this.fleeT = 0; this.broke = false; this.morale = 1; this.found = false;
   this.rag = false; this.cull = 0; this.slowT = 0; this.pushF = 0; this.hdx = this.hdz = 0; if (this.gfx) this.gfx.limp = false;
   this._sub = ''; this._deathAnim = false; this.spd = 0; this._ax = x; this._az = z;
   if (this.gfx) { this.gfx.reset(); this.gfx.play(this.type === 'drone' ? 'hover' : 'idle', 1); if (this.gun) this.gun.root.visible = true; }
@@ -184,6 +185,8 @@ EP.update = function (dt) {
   else if (this.state === 'alert') { facePlayer(this, dt, 7); this.stateT -= dt;
     if (this.stateT <= 0) { this.state = 'attack'; this.sub = ''; if (this.type === 'rifleman') { pickCover(this, false, false); this.sub = 'move'; this.stateT = 4; }
       if (this.type === 'sniper') { this.sub = 'cool'; this.cd = 0.5 + Math.random(); } } }
+  else if (this.state === 'surrender') JO.Squad.surrender(this, dt);
+  else if (this.fleeT > 0) JO.Squad.flee(this, dt);
   else AI[this.type](this, dt);
   // pose
   var m = this.model, g = this.mesh; g.position.copy(this.pos); g.rotation.y = this.yaw;
@@ -198,6 +201,7 @@ EP.update = function (dt) {
 function patrol(e, dt) {
   if (e.type === 'sniper') { e.yaw += Math.sin(e.t * 0.5) * dt * 0.6; return; }
   if (e.type === 'drone') { e.ang += dt * 0.6; e.pos.x = e.homeX + Math.cos(e.ang) * 2.5; e.pos.z = e.homeZ + Math.sin(e.ang) * 2.5; e.pos.y = 4 + Math.sin(e.t) * 0.5; e.yaw = -e.ang; return; }
+  if (JO.Squad && JO.Squad.idle(e, dt)) return;                      // off-duty behaviour and investigations (squad.js)
   var tx = e.homeX + e.patDir * 3.2; if (Math.abs(tx) > 15) tx = e.homeX - e.patDir * 3.2;
   if (moveToward(e, tx, e.homeZ, 1.1, dt) < 0.3 || e.avoidT > 0) { e.patDir = -e.patDir; e.avoidT = 0; }
   e.yaw = turnToward(e.yaw, Math.atan2(tx - e.pos.x, e.homeZ - e.pos.z), dt * 4);

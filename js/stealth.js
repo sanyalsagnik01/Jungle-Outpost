@@ -19,10 +19,10 @@ S.sightK = function () { return S.vis; };
 // called for each patrolling enemy every logic step; true means "I have seen him"
 S.detect = function (e, dt) {
   var P = JO.Player; if (P.dead) return false;
-  var K = E.sightK, range = e.cfg.sight * K * (P.crouch ? 0.6 : 1), rate = 0;
+  var Sq = JO.Squad, ex = Sq ? Sq.exposure() : 1, K = E.sightK, range = e.cfg.sight * K * (P.crouch ? 0.6 : 1) * Math.max(0.85, Math.min(1.3, ex)), rate = 0;
   if (e.see && e.dist < range) {
     var dot = Math.sin(e.yaw) * e.ndx + Math.cos(e.yaw) * e.ndz, half = e.type === 'drone' ? -2 : (e.type === 'sniper' ? 0.64 : 0.45);
-    if (dot > half) rate = (2.6 - 2.1 * e.dist / range) * (P.crouch ? 0.6 : 1) * (P.driving ? 3 : 1);
+    if (dot > half) rate = (2.6 - 2.1 * e.dist / range) * (P.crouch ? 0.6 : 1) * (P.driving ? 3 : 1) * ex * (e.actK || 1);      // lit or lamp in hand: easier to see; a man off duty notices less
   }
   if (e.dist < (P.crouch ? 1.0 : 2.8) * K && Math.abs(P.pos.y - e.pos.y) < 2.5) rate = Math.max(rate, 6);      // walked into him
   var was = e.aware || 0; e.aware = Math.max(0, Math.min(1, was + (rate > 0 ? rate : -0.3) * dt));
