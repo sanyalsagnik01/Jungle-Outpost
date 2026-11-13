@@ -13,15 +13,23 @@
 'use strict';
 var JO = window.JO, W = JO.World;
 var Po = JO.Post = { tier: 'low', setting: 'auto', ok: false, fps: 60, grade: null };
-var composer = null, bloom = null, final = null, slowT = 0, fastT = 0, warm = 0, TIERS = ['low', 'med', 'high'];
+var depthRT = null, depthMat = null, composer = null, bloom = null, final = null, slowT = 0, fastT = 0, warm = 0, TIERS = ['low', 'med', 'high'];
 // per-level look: tint, saturation, contrast
 var LOOK = [{ tint: [1.04, 1.02, 0.94], sat: 1.12, con: 1.05 }, { tint: [0.92, 1.02, 1.06], sat: 0.9, con: 1.08 }, { tint: [1.08, 0.98, 0.9], sat: 1.05, con: 1.12 }];
 var FinalShader = {
-  uniforms: { tDiffuse: { value: null }, uTint: { value: new THREE.Vector3(1, 1, 1) }, uSat: { value: 1 }, uCon: { value: 1 }, uVig: { value: 0.55 }, uFlash: { value: 0 }, uHurt: { value: 0 } },
+  uniforms: { tDiffuse: { value: null }, uTint: { value: new THREE.Vector3(1, 1, 1) }, uSat: { value: 1 }, uCon: { value: 1 }, uVig: { value: 0.55 }, uFlash: { value: 0 }, uHurt: { value: 0 },
+    uBlur: { value: 0 }, uDof: { value: 0 }, tDepth: { value: null }, uFocus: { value: 20 }, uNF: { value: new THREE.Vector2(0.1, 700) }, uPx: { value: new THREE.Vector2(0.001, 0.001) }, uLook: { value: new THREE.Vector3(1, 1, 1) }, uLift: { value: 0 } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
-  fragmentShader: 'uniform sampler2D tDiffuse; uniform vec3 uTint; uniform float uSat; uniform float uCon; uniform float uVig; uniform float uFlash; uniform float uHurt; varying vec2 vUv;' +
-    'void main(){ vec4 c=texture2D(tDiffuse,vUv); float l=dot(c.rgb,vec3(0.299,0.587,0.114)); vec3 col=mix(vec3(l),c.rgb,uSat)*uTint; col=(col-0.5)*uCon+0.5;' +
-    ' vec2 d=vUv-0.5; float v=smoothstep(0.85,0.25,length(d)*1.25); col*=mix(1.0-uVig,1.0,v); col+=uFlash*0.25; col=mix(col,vec3(l*1.2,l*0.25,l*0.2),uHurt*(1.0-v)); gl_FragColor=vec4(clamp(col,0.0,1.0),c.a); }'
+  fragmentShader: 'uniform sampler2D tDiffuse; uniform sampler2D tDepth; uniform vec3 uTint; uniform vec3 uLook; uniform float uLift; uniform float uSat; uniform float uCon; uniform float uVig; uniform float uFlash; uniform float uHurt; uniform float uBlur; uniform float uDof; uniform float uFocus; uniform vec2 uNF; uniform vec2 uPx; varying vec2 vUv;' +
+    'void main(){ vec4 c=texture2D(tDiffuse,vUv); vec2 d=vUv-0.5;' +
+    // movement blur: streaks toward the edges of the view
+    ' if(uBlur>0.002){ vec2 st=d*uBlur*0.085*length(d)*2.0; vec3 a=c.rgb; for(int i=1;i<6;i++){ a+=texture2D(tDiffuse,vUv-st*float(i)*0.2).rgb; } c.rgb=a/6.0; }' +
+    // depth of field: blur grows with distance from the focus plane
+    ' if(uDof>0.002){ float z=texture2D(tDepth,vUv).x; float lin=(2.0*uNF.x*uNF.y)/(uNF.y+uNF.x-(z*2.0-1.0)*(uNF.y-uNF.x)); float coc=clamp(abs(lin-uFocus)/max(uFocus*0.8,5.0)-0.12,0.0,1.0)*uDof*(lin<uFocus?0.4:1.0);' +
+    '  if(coc>0.01){ vec3 a=c.rgb; vec2 r=uPx*coc*3.2; a+=texture2D(tDiffuse,vUv+r*vec2(1.0,0.0)).rgb; a+=texture2D(tDiffuse,vUv+r*vec2(-1.0,0.0)).rgb; a+=texture2D(tDiffuse,vUv+r*vec2(0.0,1.0)).rgb; a+=texture2D(tDiffuse,vUv+r*vec2(0.0,-1.0)).rgb;' +
+    '   a+=texture2D(tDiffuse,vUv+r*vec2(0.7,0.7)).rgb; a+=texture2D(tDiffuse,vUv+r*vec2(-0.7,0.7)).rgb; a+=texture2D(tDiffuse,vUv+r*vec2(0.7,-0.7)).rgb; a+=texture2D(tDiffuse,vUv+r*vec2(-0.7,-0.7)).rgb; c.rgb=a/9.0; } }' +
+    ' float l=dot(c.rgb,vec3(0.299,0.587,0.114)); vec3 col=mix(vec3(l),c.rgb,uSat)*uTint*uLook+uLift; col=(col-0.5)*uCon+0.5;' +
+    ' float v=1.0-smoothstep(0.25,0.85,length(d)*1.25); col*=mix(1.0-uVig,1.0,v); col+=uFlash*0.25; col=mix(col,vec3(l*1.2,l*0.25,l*0.2),uHurt*(1.0-v)); gl_FragColor=vec4(clamp(col,0.0,1.0),c.a); }'
 };
 function build() {
   if (composer || !window.THREE || !THREE.EffectComposer || !THREE.UnrealBloomPass) return !!composer;
@@ -38,6 +46,7 @@ function build() {
 Po.resize = function () {
   var r = W.renderer; r.setPixelRatio(Math.min(window.devicePixelRatio || 1, Po.tier === 'low' ? 1 : 1.5)); r.setSize(window.innerWidth, window.innerHeight, false);
   if (composer) { composer.setPixelRatio(r.getPixelRatio()); composer.setSize(window.innerWidth, window.innerHeight); }
+  if (depthRT) { depthRT.dispose(); depthRT = null; }
 };
 Po.apply = function (tier) {
   if (tier !== 'low' && !build()) tier = 'low';
@@ -67,7 +76,17 @@ Po.render = function (scene, cam, real) {
   if (Po.tier === 'low' || !composer) { W.renderer.render(scene, cam); return; }
   var u = final.uniforms, g = Po.grade || LOOK[0], Wx = JO.Weather, P = JO.Player, wet = Wx ? Wx.rain * 0.12 + Wx.fog * 0.1 : 0;
   u.uTint.value.set(g.tint[0], g.tint[1], g.tint[2]); u.uSat.value = g.sat - wet; u.uCon.value = g.con; u.uFlash.value = Wx ? Wx.flash : 0;
-  u.uVig.value = 0.5 + (JO.Input.ads ? 0.15 : 0) + (P.crouch ? 0.12 : 0);
+  u.uVig.value = 0.5 + (JO.Input.ads ? 0.15 : 0) + (P.crouch ? 0.12 : 0) + (Po.vigAdd || 0);
+  u.uBlur.value = Po.blurMove || 0;
+  // depth of field needs the scene's depth: one extra half-size pass, only while aiming on HIGH
+  var dof = Po.tier === 'high' && Po.dofK > 0.02 && JO.Game.state === 'playing' ? Po.dofK : 0;
+  if (dof > 0) { try {
+    if (!depthRT) { var ds = W.renderer.getDrawingBufferSize(new THREE.Vector2()); depthRT = new THREE.WebGLRenderTarget(Math.max(2, ds.x >> 1), Math.max(2, ds.y >> 1), { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
+      depthRT.depthTexture = new THREE.DepthTexture(depthRT.width, depthRT.height); depthRT.depthTexture.type = THREE.UnsignedIntType; depthMat = new THREE.MeshBasicMaterial({ colorWrite: false }); }
+    var old = scene.overrideMaterial, bg = scene.background; scene.overrideMaterial = depthMat; scene.background = null; W.renderer.setRenderTarget(depthRT); W.renderer.clear(); W.renderer.render(scene, cam); W.renderer.setRenderTarget(null); scene.overrideMaterial = old; scene.background = bg;
+    u.tDepth.value = depthRT.depthTexture; u.uFocus.value = Po.focus || 20; u.uNF.value.set(cam.near, cam.far); u.uPx.value.set(1 / depthRT.width, 1 / depthRT.height); Po.dofPasses = (Po.dofPasses | 0) + 1;
+  } catch (e) { dof = 0; Po.dofK = 0; JO.Q.TABLE.dof = [0, 0, 0]; if (window.console) console.warn('[post] depth of field unavailable', e); } }
+  u.uDof.value = dof;
   u.uHurt.value = JO.Game.state === 'playing' && P.hp < P.maxHp * 0.3 ? 0.45 : 0;
   composer.passes[0].scene = scene; composer.passes[0].camera = cam;
   try { composer.render(real); } catch (e) { composer = null; Po.ok = false; Po.apply('low'); W.renderer.render(scene, cam); }

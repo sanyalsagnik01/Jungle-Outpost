@@ -69,6 +69,7 @@ canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block}
 #hitm.kill:before,#hitm.kill:after{background:var(--red);width:3px}
 #vignette{position:fixed;inset:0;pointer-events:none;opacity:0;
   background:radial-gradient(ellipse at center,rgba(255,0,0,0) 45%,rgba(200,10,0,.75) 100%)}
+#visor{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
 #lowhp{position:fixed;inset:0;pointer-events:none;opacity:0;
   background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(120,0,0,.55) 100%)}
 #inds{position:absolute;left:50%;top:50%;width:0;height:0}
@@ -244,7 +245,7 @@ body.touch #prompt{top:40%}
 <body>
 <canvas id="game"></canvas>
 
-<div id="vignette"></div><div id="lowhp"></div>
+<div id="vignette"></div><div id="lowhp"></div><canvas id="visor" class="hidden" width="640" height="360"></canvas>
 
 <div id="hud" class="hidden">
   <div id="hudTL" class="panel"><div id="hudLevel"></div><div id="hudObj"></div><div id="hudKills"></div><div id="hudSalvage"></div><div id="hudWx"></div></div>
@@ -332,7 +333,7 @@ body.touch #prompt{top:40%}
     <tr><td>C or Ctrl</td><td>Roll / dodge &mdash; brief invulnerability</td></tr><tr><td>R</td><td>Reload</td></tr>
     <tr><td>1 / 2 / 3</td><td>Assault rifle / Shotgun / Marksman rifle</td></tr><tr><td>4 / 5</td><td>Crossbow (silent) / Flamethrower</td></tr>
     <tr><td>G / Q</td><td>Throw frag grenade / smoke grenade</td></tr><tr><td>B</td><td>Field bench at a reached checkpoint (skills, weapon mods)</td></tr>
-    <tr><td>X</td><td>Crouch: quieter, harder to see</td></tr><tr><td>L</td><td>Flashlight: lights your way, gives you away</td></tr><tr><td>F</td><td>Silent takedown from behind an unaware enemy</td></tr>
+    <tr><td>X</td><td>Crouch: quieter, harder to see</td></tr><tr><td>L</td><td>Flashlight: lights your way, gives you away</td></tr><tr><td>Z / V</td><td>Lean left / right around cover</td></tr><tr><td>Space at cover</td><td>Vault low cover, climb taller blocks</td></tr><tr><td>T</td><td>Wipe rain off the lens</td></tr><tr><td>Gamepad</td><td>Sticks move and look, triggers aim and fire, A jump, B roll, X reload / use, Y swap</td></tr><tr><td>F</td><td>Silent takedown from behind an unaware enemy</td></tr>
     <tr><td>E</td><td>Also: hack terminals, pull levers, drive the jeep</td></tr><tr><td>E</td><td>Open supply crates</td></tr>
     <tr><td>F4</td><td>Graphics quality: Auto / High / Medium / Low</td></tr><tr><td>Settings</td><td>Every key above can be rebound; sensitivity, volume, subtitles and accessibility live there too</td></tr><tr><td>Esc</td><td>Pause</td></tr><tr><td>M</td><td>Mute</td></tr>
   </table>
@@ -461,6 +462,7 @@ body.touch #prompt{top:40%}
 <script src="js/ambience.js"></script>
 <script src="js/physical.js"></script>
 <script src="js/squad.js"></script>
+<script src="js/feel.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

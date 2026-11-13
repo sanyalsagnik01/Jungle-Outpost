@@ -105,6 +105,7 @@ P.knock = function (x, z) { P.kx += x; P.kz += z; };
 
 P.update = function (dt) {
   P.prev.copy(P.pos);
+  if (JO.Feel && JO.Feel.traversing(dt)) return;                // mid-vault or mid-climb (feel.js)
   if (P.dead) { if (!P.gfx) P.model.g.rotation.x = Math.max(-1.5, P.model.g.rotation.x - dt * 4); else { P.model.g.rotation.x = 0; P.model.g.scale.setScalar(1); } return; }
   if (P.driving) {                                              // the jeep moves us; props.js owns the wheel
     JO.Props.drive(dt); if (P.invuln > 0) P.invuln -= dt; P.sinceDmg += dt;
@@ -133,6 +134,7 @@ P.update = function (dt) {
     speed = P.crouch ? PC.crouch : (I.ads ? PC.adsMove : (sprinting ? PC.sprint : PC.walk));
     if (P.inWater) speed *= 0.6;
     P.vx = wx * speed; P.vz = wz * speed;
+    if (I.jumpPressed && P.onGround && JO.Feel && JO.Feel.tryTraverse()) return;
     if (I.jumpPressed && P.onGround) { P.vy = PC.jump; P.onGround = false; P.crouch = false; A.play('jump'); }
   }
   if (sprinting) { P.stamina = Math.max(0, P.stamina - PC.sprintDrain * dt); P.stamDelay = PC.staminaDelay; }
@@ -143,7 +145,7 @@ P.update = function (dt) {
   P.pos.x += (P.vx + P.kx) * dt; P.pos.z += (P.vz + P.kz) * dt; P.pos.y += P.vy * dt;
   var kd = Math.max(0, 1 - dt * 6); P.kx *= kd; P.kz *= kd;
   var floor = W.moveCircle(P.pos, PC.radius, P.pos.y, true); W.clamp(P.pos, PC.radius);
-  if (P.pos.y <= floor) { P.pos.y = floor; if (P.vy < -6) A.play('step', 1.6); P.vy = 0; P.onGround = true; } else P.onGround = false;
+  if (P.pos.y <= floor) { P.pos.y = floor; if (P.vy < -6) A.play('step', 1.6); if (P.vy < -2 && JO.Feel) JO.Feel.land(P.vy); P.vy = 0; P.onGround = true; } else P.onGround = false;
 
   var moved = Math.hypot(P.pos.x - P.prev.x, P.pos.z - P.prev.z);
   if (P.onGround && P.rolling <= 0) { P.stepDist += moved; P.walkPhase += moved * 2.3;
@@ -186,9 +188,11 @@ Cam.compute = function (alpha, frameDt) {
   Cam.x = vx + ox * len; Cam.y = Math.max(0.25, vy + oy * len); Cam.z = vz + oz * len;
   Cam.fx = fx; Cam.fy = fy; Cam.fz = fz; Cam.rx = rx; Cam.rz = rz;
   Cam.ux = -rz * fy; Cam.uy = rz * fx - rx * fz; Cam.uz = rx * fy;
+  if (JO.Feel) JO.Feel.offset(Cam);
   Cam.dist = len; Cam.fov = 65 - (JO.Weapons.cur === 2 && JO.Perks.mod('mr_scope') ? 40 : 25) * k;
 };
 Cam.apply = function (camera) {
+  if (JO.Feel && JO.Feel.on) return JO.Feel.applyCam(camera, Cam);
   var s = FX.shake * 0.35;
   camera.position.set(Cam.x + (Math.random() - 0.5) * s, Cam.y + (Math.random() - 0.5) * s, Cam.z + (Math.random() - 0.5) * s);
   camera.lookAt(Cam.x + Cam.fx * 20, Cam.y + Cam.fy * 20, Cam.z + Cam.fz * 20);
