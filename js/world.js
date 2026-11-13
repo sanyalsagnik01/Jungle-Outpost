@@ -48,12 +48,14 @@ W.init = function (canvas) {
   var dg = new THREE.SphereGeometry(320, 16, 10);
   dg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(dg.attributes.position.count * 3), 3));
   domeMat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false });
+  W.lights = { hemi: hemi, sun: sun }; W.domeMat = domeMat;
   dome = new THREE.Mesh(dg, domeMat); dome.frustumCulled = false; dome.renderOrder = -10; scene.add(dome);
   W.resize();
 };
 W.resize = function () {
   var w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
+  if (JO.Post && JO.Post.resize) JO.Post.resize();
 };
 W.updateSun = function (px, pz) {
   sun.position.set(px + sunOff.x, sunOff.y, pz + sunOff.z); sun.target.position.set(px, 0, pz); sun.target.updateMatrixWorld();

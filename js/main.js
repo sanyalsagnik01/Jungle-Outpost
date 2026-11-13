@@ -253,7 +253,8 @@ function tick(real) {
   if (Game.state !== 'paused') St.update(real); St.cutUpdate(real);
   A.update(real);
   if (dbgOn) { dbgT -= real; if (dbgT <= 0) { dbgT = 0.2; debugOverlay(real); } }
-  if (!Game.debug.noRender) W.renderer.render(W.scene, cam);
+  JO.Weather.update(fdt, real); JO.Radar.update(real);
+  if (!Game.debug.noRender) JO.Post.render(W.scene, cam, real);
 }
 
 /* ---------- debug overlay (F3): what is under the crosshair, and what the asset layer loaded ---------- */
@@ -286,7 +287,7 @@ Game.toggleDebug = function (on) {
 function bind(id, fn) { document.getElementById(id).addEventListener('click', function (e) { A.init(); A.play('ui'); fn(e); }); }
 Game.init = function () {
   var canvas = document.getElementById('game');
-  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas); St.init(); Pk.init(); Ar.init(W.scene); Sl.init(); Pr.init(); JO.Codex.init(W.scene); JO.Finale.init(W.scene);
+  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas); St.init(); Pk.init(); Ar.init(W.scene); Sl.init(); Pr.init(); JO.Weather.init(); JO.Radar.init(); JO.Post.init(); JO.Codex.init(W.scene); JO.Finale.init(W.scene);
   FX.pMat.uniforms.uScale.value = window.innerHeight;
   W.build(CFG.LEVELS[0]); P.model.g.visible = false;                       // title backdrop
   // models load behind the title screen; whatever fails simply stays primitive

@@ -14,7 +14,7 @@ var VOWELS = [730, 530, 390, 570, 440, 300, 640];
 A.init = function () {
   if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
   try { var C = window.AudioContext || window.webkitAudioContext; ctx = A.ctx = new C(); } catch (e) { return; }
-  master = ctx.createGain(); master.gain.value = A.muted ? 0 : 0.8; master.connect(ctx.destination);
+  master = ctx.createGain(); master.gain.value = A.muted ? 0 : 0.8; master.connect(ctx.destination); A.master = master;
   sfx = ctx.createGain(); sfx.gain.value = 0.9; sfx.connect(master);
   music = ctx.createGain(); music.gain.value = 0.42; music.connect(master);
   amb = ctx.createGain(); amb.gain.value = 0.0; amb.connect(master);
