@@ -80,6 +80,45 @@ idol_found_1.mp3	juno	Is that a golden idol? Who hides those in a jungle? Beside
 boat_start_1.mp3	juno	You're on the gun. I'd say aim, but it has plenty of bullets.
 gate_hack_1.mp3	juno	Stay on the terminal. They will not like this.
 weather_rain_1.mp3	juno	Rain's coming in. They'll see less and hear less. So will you.
+re_lamp_1.mp3	juno	Lights out. Somebody is going to come and look at that.
+re_lamp_2.mp3	juno	Nice shot. Now it's dark for them too.
+re_surr_1.mp3	juno	He's done, Kade. Hands up means hands up.
+re_surr_2.mp3	juno	Your call. I'm not the one who has to live with it.
+re_spare_1.mp3	juno	He's running. Good. Let him tell the others what he saw.
+re_spare_2.mp3	juno	One less man holding a rifle, and nobody had to die for it.
+re_exec_1.mp3	juno	He had dropped his weapon.
+re_exec_2.mp3	juno	...Noted.
+re_body_1.mp3	juno	They found one of the bodies. So much for quiet.
+re_body_2.mp3	juno	Somebody tripped over your handiwork. Expect company.
+re_storm_1.mp3	juno	Storm's coming in. Thunder covers gunfire, if you time it.
+re_storm_2.mp3	juno	Lightning. If you can see them in the flash, they can see you.
+re_rain_1.mp3	juno	Rain. Good for you, it eats footsteps. Bad for my rotor.
+re_rain_2.mp3	juno	It's coming down. Watch the puddles, they splash.
+re_torch_1.mp3	juno	That torch of yours can be seen from the next valley.
+re_torch_2.mp3	juno	Light on. Brave. Or tired of sneaking.
+re_quiet_1.mp3	juno	Hear that? No birds. They know something is wrong before the soldiers do.
+re_quiet_2.mp3	juno	The jungle's gone quiet. That's on you.
+re_birds_1.mp3	juno	Those birds just told everyone where you are.
+re_birds_2.mp3	juno	Flock's up. Anyone watching the treeline saw that.
+re_heat_1.mp3	juno	The flamethrower needs a breath. So do I.
+re_vault_1.mp3	juno	Over the top. Show-off.
+re_ghost_1.mp3	juno	Three down and nobody has noticed. I'm almost impressed.
+re_ghost_2.mp3	juno	You're good at this. I'm not sure that's a compliment.
+re_whiz_1.mp3	juno	That one parted your hair.
+re_whiz_2.mp3	juno	Too close. Move!
+s1_camp_1.mp3	kade	She had a place to sleep. She chose not to use it.
+s1_graves_1.mp3	juno	They are losing people out here, Kade, and it isn't to you.
+s1_flags_1.mp3	kade	That's her writing. She was measuring it.
+s1_flags_2.mp3	juno	Measuring how fast it grows. Or how fast it takes.
+s2_shrine_1.mp3	juno	Mercenaries, praying. That's new.
+s2_cots_1.mp3	kade	They weren't prisoners.
+s2_cots_2.mp3	juno	No. That's the part I don't like.
+s2_drop_1.mp3	juno	Whoever pays for this place doesn't want a paper trail.
+s3_bench_1.mp3	kade	Mira...
+s3_bench_2.mp3	juno	Keep it together. We're close.
+s3_wall_1.mp3	juno	That's not a prisoner counting days. That's someone who stopped wanting to.
+s3_radio_1.mp3	kade	Nobody was calling for help.
+s3_radio_2.mp3	juno	Somebody made sure nobody could.
 bark_alert_a_1.mp3	soldier_a	Contact!
 bark_alert_a_2.mp3	soldier_a	Intruder on the trail!
 bark_alert_b_1.mp3	soldier_b	He's here!
@@ -105,6 +144,16 @@ bark_panic_a_1.mp3	soldier_a	He's a demon!
 bark_panic_b_1.mp3	soldier_b	I can't stop him!
 bark_search_a_1.mp3	soldier_a	Thought I heard something.
 bark_search_c_1.mp3	soldier_c	Check the bushes.
+bark_investigate_a_1.mp3	soldier_a	What was that?
+bark_investigate_a_2.mp3	soldier_a	Stay here. I'll look.
+bark_investigate_b_1.mp3	soldier_b	Something moved.
+bark_investigate_c_1.mp3	soldier_c	Probably nothing. Probably.
+bark_body_a_1.mp3	soldier_a	Man down! We've got a body!
+bark_body_b_1.mp3	soldier_b	Ortiz? Ortiz!
+bark_body_c_1.mp3	soldier_c	He's dead. Sound the alarm!
+bark_surrender_a_1.mp3	soldier_a	Don't shoot! I'm done!
+bark_surrender_b_1.mp3	soldier_b	I give up! I give up!
+bark_surrender_c_1.mp3	soldier_c	Enough. I'm not dying for a flower.
 end_destroy_juno.mp3	juno	You got her out. That was the job. The rest... we'll carry it. Juno out.
 end_preserve_juno.mp3	juno	She chose to stay, Kade. That's not losing her. Probably. Juno out.
 end_third_juno.mp3	juno	Everybody lives and the flower behaves. I didn't know we were allowed to win like that. Juno out.

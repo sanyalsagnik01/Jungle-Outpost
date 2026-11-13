@@ -120,6 +120,9 @@ body.paused #dlg,body.paused #bark{visibility:hidden}
 #cutBar .btn{min-width:0;font-size:15px;padding:8px 22px}
 @media (prefers-reduced-motion:reduce){#cutArt{animation:none !important}}
 
+#sceneCard{position:fixed;left:50%;top:15%;transform:translateX(-50%);width:min(560px,90vw);z-index:44;padding:14px 18px;background:rgba(233,228,207,.95);color:#14110c;box-shadow:6px 6px 0 #000;border-left:5px solid var(--cyan);pointer-events:none}
+#sceneCard b{display:block;font-family:var(--head);font-weight:normal;letter-spacing:3px;font-size:20px;margin-bottom:4px}#sceneCard p{margin:0;font-size:calc(16px * var(--sub,1));line-height:1.45}#sceneCard small{display:block;margin-top:8px;font-family:var(--mono);font-size:10px;letter-spacing:3px;opacity:.6}
+body.dieg #hudTL,body.dieg #hudBL,body.dieg #hudBR,body.dieg #minimap,body.dieg #compass{opacity:0;transition:opacity .5s}body.dieg #hudTL.need,body.dieg #hudBL.need,body.dieg #hudBR.need,body.dieg #minimap.need,body.dieg #compass.need{opacity:1}
 #toasts{position:fixed;right:14px;top:224px;z-index:50;display:flex;flex-direction:column;gap:6px;pointer-events:none;align-items:flex-end}
 .toast{min-width:230px;max-width:340px;padding:8px 12px;background:rgba(8,14,8,.9);border-right:3px solid var(--amber);font-family:var(--mono);font-size:12px;text-align:right;animation:toastIn .25s ease-out;transition:opacity .5s,transform .5s}
 .toast b{display:block;font-family:var(--head);font-weight:normal;letter-spacing:3px;font-size:14px}.toast.out{opacity:0;transform:translateX(30px)}
@@ -299,6 +302,7 @@ body.touch #prompt{top:40%}
 <div id="hack" class="hidden"><b>BYPASSING GATE LOCK</b><div id="hackSeq"></div><div id="hackBar"><i id="hackFill"></i></div>
   <small>Enter the sequence with W A S D or the arrow keys. A wrong key starts it over.</small>
   <div id="hackPad"><button data-dir="left">&larr;</button><button data-dir="up">&uarr;</button><button data-dir="down">&darr;</button><button data-dir="right">&rarr;</button></div></div>
+<div id="sceneCard" class="hidden"><b></b><p></p><small></small></div>
 <div id="toasts"></div>
 <pre id="dbg" class="hidden"></pre>
 <div id="fps" class="hidden"></div>
@@ -333,7 +337,7 @@ body.touch #prompt{top:40%}
     <tr><td>C or Ctrl</td><td>Roll / dodge &mdash; brief invulnerability</td></tr><tr><td>R</td><td>Reload</td></tr>
     <tr><td>1 / 2 / 3</td><td>Assault rifle / Shotgun / Marksman rifle</td></tr><tr><td>4 / 5</td><td>Crossbow (silent) / Flamethrower</td></tr>
     <tr><td>G / Q</td><td>Throw frag grenade / smoke grenade</td></tr><tr><td>B</td><td>Field bench at a reached checkpoint (skills, weapon mods)</td></tr>
-    <tr><td>X</td><td>Crouch: quieter, harder to see</td></tr><tr><td>L</td><td>Flashlight: lights your way, gives you away</td></tr><tr><td>Z / V</td><td>Lean left / right around cover</td></tr><tr><td>Space at cover</td><td>Vault low cover, climb taller blocks</td></tr><tr><td>T</td><td>Wipe rain off the lens</td></tr><tr><td>Gamepad</td><td>Sticks move and look, triggers aim and fire, A jump, B roll, X reload / use, Y swap</td></tr><tr><td>F</td><td>Silent takedown from behind an unaware enemy</td></tr>
+    <tr><td>X</td><td>Crouch: quieter, harder to see</td></tr><tr><td>L</td><td>Flashlight: lights your way, gives you away</td></tr><tr><td>Z / V</td><td>Lean left / right around cover</td></tr><tr><td>Space at cover</td><td>Vault low cover, climb taller blocks</td></tr><tr><td>T</td><td>Wipe rain off the lens</td></tr><tr><td>H</td><td>Minimal HUD on / off</td></tr><tr><td>F2</td><td>FPS and draw-call overlay</td></tr><tr><td>Gamepad</td><td>Sticks move and look, triggers aim and fire, A jump, B roll, X reload / use, Y swap</td></tr><tr><td>F</td><td>Silent takedown from behind an unaware enemy</td></tr>
     <tr><td>E</td><td>Also: hack terminals, pull levers, drive the jeep</td></tr><tr><td>E</td><td>Open supply crates</td></tr>
     <tr><td>F4</td><td>Graphics quality: Auto / High / Medium / Low</td></tr><tr><td>Settings</td><td>Every key above can be rebound; sensitivity, volume, subtitles and accessibility live there too</td></tr><tr><td>Esc</td><td>Pause</td></tr><tr><td>M</td><td>Mute</td></tr>
   </table>
@@ -465,6 +469,7 @@ body.touch #prompt{top:40%}
 <script src="js/feel.js"></script>
 <script src="js/atmos.js"></script>
 <script src="js/sound.js"></script>
+<script src="js/scenes.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

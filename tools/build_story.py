@@ -91,6 +91,33 @@ var('idol_found', 'juno', 'idol', 0, "Is that a golden idol? Who hides those in 
 var('boat_start', 'juno', 'boat', 0, "You're on the gun. I'd say aim, but it has plenty of bullets.")
 var('gate_hack', 'juno', 'hack', 0, "Stay on the terminal. They will not like this.")
 var('weather_rain', 'juno', 'rain', 0, "Rain's coming in. They'll see less and hear less. So will you.")
+# ---------------- Juno reacts to how you play (living-world pass) ----------------
+var('re_lamp', 'juno', 'react:lamp_out', 60, "Lights out. Somebody is going to come and look at that.", "Nice shot. Now it's dark for them too.")
+var('re_surr', 'juno', 'react:surrender', 50, "He's done, Kade. Hands up means hands up.", "Your call. I'm not the one who has to live with it.")
+var('re_spare', 'juno', 'react:spared', 70, "He's running. Good. Let him tell the others what he saw.", "One less man holding a rifle, and nobody had to die for it.")
+var('re_exec', 'juno', 'react:executed', 70, "He had dropped his weapon.", "...Noted.")
+var('re_body', 'juno', 'react:body_found', 60, "They found one of the bodies. So much for quiet.", "Somebody tripped over your handiwork. Expect company.")
+var('re_storm', 'juno', 'react:storm', 200, "Storm's coming in. Thunder covers gunfire, if you time it.", "Lightning. If you can see them in the flash, they can see you.")
+var('re_rain', 'juno', 'react:rain', 200, "Rain. Good for you, it eats footsteps. Bad for my rotor.", "It's coming down. Watch the puddles, they splash.")
+var('re_torch', 'juno', 'react:torch', 240, "That torch of yours can be seen from the next valley.", "Light on. Brave. Or tired of sneaking.")
+var('re_quiet', 'juno', 'react:quiet', 300, "Hear that? No birds. They know something is wrong before the soldiers do.", "The jungle's gone quiet. That's on you.")
+var('re_birds', 'juno', 'react:birds', 150, "Those birds just told everyone where you are.", "Flock's up. Anyone watching the treeline saw that.")
+var('re_heat', 'juno', 'react:overheat', 120, "The flamethrower needs a breath. So do I.")
+var('re_vault', 'juno', 'react:vault', 400, "Over the top. Show-off.")
+var('re_ghost', 'juno', 'react:ghost', 200, "Three down and nobody has noticed. I'm almost impressed.", "You're good at this. I'm not sure that's a compliment.")
+var('re_whiz', 'juno', 'react:whiz', 150, "That one parted your hair.", "Too close. Move!")
+# ---------------- things left behind: scenes you can stop and look at ----------------
+SCENES = [
+ dict(id='s1_camp', level=0, z=-88, x=-10.5, kind='camp', title="A cold camp", text="Two bedrolls. One has been slept in. The other is still folded, with M.V. inked on the strap.", say=[('kade', "She had a place to sleep. She chose not to use it.")]),
+ dict(id='s1_graves', level=0, z=-150, x=10.5, kind='graves', title="Three helmets", text="Three stakes, three helmets, fresh earth. The soldiers bury their own and do not mark the names.", say=[('juno', "They are losing people out here, Kade, and it isn't to you.")]),
+ dict(id='s1_flags', level=0, z=-205, x=-10, kind='flags', title="Survey line", text="Survey flags in a row, each tagged in Mira's handwriting: soil, water, bloom spread. The last tag only says: faster than last month.", say=[('kade', "That's her writing. She was measuring it."), ('juno', "Measuring how fast it grows. Or how fast it takes.")]),
+ dict(id='s2_shrine', level=1, z=-60, x=10.5, kind='shrine', title="An old shrine", text="Fresh fruit in a bowl older than the ruins. Somebody still leaves offerings at a shrine nobody admits to visiting.", say=[('juno', "Mercenaries, praying. That's new.")]),
+ dict(id='s2_cots', level=1, z=-150, x=-10.5, kind='cots', title="The quiet ward", text="Six cots under a tarp. None of these men were wounded. Every chart says the same thing: calm, compliant, will not leave.", say=[('kade', "They weren't prisoners."), ('juno', "No. That's the part I don't like.")]),
+ dict(id='s2_drop', level=1, z=-200, x=10.5, kind='drop', title="A drop that missed", text="Supply crates half sunk in the mud. A company name stencilled on, painted out, and a second name painted over that.", say=[('juno', "Whoever pays for this place doesn't want a paper trail.")]),
+ dict(id='s3_bench', level=2, z=-84, x=-10.5, kind='bench', title="Mira's field bench", text="Sample jars, each brighter than the last. In the margin of the log: it wants to be looked after. I am not sure that is a metaphor any more.", say=[('kade', "Mira..."), ('juno', "Keep it together. We're close.")]),
+ dict(id='s3_wall', level=2, z=-162, x=10.5, kind='wall', title="The count", text="Someone kept a tally on this wall. Days, then weeks. The marks stop, and under them one line: why would I go?", say=[('juno', "That's not a prisoner counting days. That's someone who stopped wanting to.")]),
+ dict(id='s3_radio', level=2, z=-206, x=-10.5, kind='radio', title="The long-range set", text="The outpost's radio, opened up with an axe. Whoever did it coiled the cables neatly afterwards.", say=[('kade', "Nobody was calling for help."), ('juno', "Somebody made sure nobody could.")])]
+for sc in SCENES: seq(sc['id'], 'scene:' + sc['id'], *sc['say'])
 # ---------------- enemy barks ----------------
 B = []
 def bark(event, speaker, *texts):
@@ -107,6 +134,9 @@ bark('aim', 'soldier_a', "Hold still...", "Got you in my sights.")
 bark('idle', 'soldier_a', "Three days of rain. Three."); bark('idle', 'soldier_b', "I didn't sign up to guard a flower."); bark('idle', 'soldier_c', "Quiet tonight. I hate quiet.")
 bark('panic', 'soldier_a', "He's a demon!"); bark('panic', 'soldier_b', "I can't stop him!")
 bark('search', 'soldier_a', "Thought I heard something."); bark('search', 'soldier_c', "Check the bushes.")
+bark('investigate', 'soldier_a', "What was that?", "Stay here. I'll look."); bark('investigate', 'soldier_b', "Something moved."); bark('investigate', 'soldier_c', "Probably nothing. Probably.")
+bark('body', 'soldier_a', "Man down! We've got a body!"); bark('body', 'soldier_b', "Ortiz? Ortiz!"); bark('body', 'soldier_c', "He's dead. Sound the alarm!")
+bark('surrender', 'soldier_a', "Don't shoot! I'm done!"); bark('surrender', 'soldier_b', "I give up! I give up!"); bark('surrender', 'soldier_c', "Enough. I'm not dying for a flower.")
 
 story = {
   'speakers': {
@@ -201,6 +231,7 @@ story = {
       {'id': 'commander', 'title': "The Commander's Walker", 'text': "Four legs, a shield, missiles, mortars and a laser. When the armour breaks, the core takes triple damage."}],
   },
 }
+story['scenes'] = [dict((k, v) for k, v in sc.items() if k != 'say') for sc in SCENES]
 for e in story['endings'].values(): e['signoff']['voice'] = 'audio/voice/%s.mp3' % e['signoff']['id']
 # synthesized stand-in voice per speaker (used for any line that has no audio file): pitch in Hz, radio = band-limited like a headset
 BLIP = {'kade': (125, 0), 'juno': (215, 1), 'brute': (72, 0), 'phantom': (150, 0), 'commander': (98, 0), 'mira': (245, 0), 'soldier_a': (140, 0), 'soldier_b': (118, 0), 'soldier_c': (104, 0)}

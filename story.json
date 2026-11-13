@@ -878,6 +878,331 @@
    "cooldown": 0
   },
   {
+   "id": "re_lamp_1",
+   "speaker": "juno",
+   "text": "Lights out. Somebody is going to come and look at that.",
+   "voice": "audio/voice/re_lamp_1.mp3",
+   "trigger": "react:lamp_out",
+   "cooldown": 60
+  },
+  {
+   "id": "re_lamp_2",
+   "speaker": "juno",
+   "text": "Nice shot. Now it's dark for them too.",
+   "voice": "audio/voice/re_lamp_2.mp3",
+   "trigger": "react:lamp_out",
+   "cooldown": 60
+  },
+  {
+   "id": "re_surr_1",
+   "speaker": "juno",
+   "text": "He's done, Kade. Hands up means hands up.",
+   "voice": "audio/voice/re_surr_1.mp3",
+   "trigger": "react:surrender",
+   "cooldown": 50
+  },
+  {
+   "id": "re_surr_2",
+   "speaker": "juno",
+   "text": "Your call. I'm not the one who has to live with it.",
+   "voice": "audio/voice/re_surr_2.mp3",
+   "trigger": "react:surrender",
+   "cooldown": 50
+  },
+  {
+   "id": "re_spare_1",
+   "speaker": "juno",
+   "text": "He's running. Good. Let him tell the others what he saw.",
+   "voice": "audio/voice/re_spare_1.mp3",
+   "trigger": "react:spared",
+   "cooldown": 70
+  },
+  {
+   "id": "re_spare_2",
+   "speaker": "juno",
+   "text": "One less man holding a rifle, and nobody had to die for it.",
+   "voice": "audio/voice/re_spare_2.mp3",
+   "trigger": "react:spared",
+   "cooldown": 70
+  },
+  {
+   "id": "re_exec_1",
+   "speaker": "juno",
+   "text": "He had dropped his weapon.",
+   "voice": "audio/voice/re_exec_1.mp3",
+   "trigger": "react:executed",
+   "cooldown": 70
+  },
+  {
+   "id": "re_exec_2",
+   "speaker": "juno",
+   "text": "...Noted.",
+   "voice": "audio/voice/re_exec_2.mp3",
+   "trigger": "react:executed",
+   "cooldown": 70
+  },
+  {
+   "id": "re_body_1",
+   "speaker": "juno",
+   "text": "They found one of the bodies. So much for quiet.",
+   "voice": "audio/voice/re_body_1.mp3",
+   "trigger": "react:body_found",
+   "cooldown": 60
+  },
+  {
+   "id": "re_body_2",
+   "speaker": "juno",
+   "text": "Somebody tripped over your handiwork. Expect company.",
+   "voice": "audio/voice/re_body_2.mp3",
+   "trigger": "react:body_found",
+   "cooldown": 60
+  },
+  {
+   "id": "re_storm_1",
+   "speaker": "juno",
+   "text": "Storm's coming in. Thunder covers gunfire, if you time it.",
+   "voice": "audio/voice/re_storm_1.mp3",
+   "trigger": "react:storm",
+   "cooldown": 200
+  },
+  {
+   "id": "re_storm_2",
+   "speaker": "juno",
+   "text": "Lightning. If you can see them in the flash, they can see you.",
+   "voice": "audio/voice/re_storm_2.mp3",
+   "trigger": "react:storm",
+   "cooldown": 200
+  },
+  {
+   "id": "re_rain_1",
+   "speaker": "juno",
+   "text": "Rain. Good for you, it eats footsteps. Bad for my rotor.",
+   "voice": "audio/voice/re_rain_1.mp3",
+   "trigger": "react:rain",
+   "cooldown": 200
+  },
+  {
+   "id": "re_rain_2",
+   "speaker": "juno",
+   "text": "It's coming down. Watch the puddles, they splash.",
+   "voice": "audio/voice/re_rain_2.mp3",
+   "trigger": "react:rain",
+   "cooldown": 200
+  },
+  {
+   "id": "re_torch_1",
+   "speaker": "juno",
+   "text": "That torch of yours can be seen from the next valley.",
+   "voice": "audio/voice/re_torch_1.mp3",
+   "trigger": "react:torch",
+   "cooldown": 240
+  },
+  {
+   "id": "re_torch_2",
+   "speaker": "juno",
+   "text": "Light on. Brave. Or tired of sneaking.",
+   "voice": "audio/voice/re_torch_2.mp3",
+   "trigger": "react:torch",
+   "cooldown": 240
+  },
+  {
+   "id": "re_quiet_1",
+   "speaker": "juno",
+   "text": "Hear that? No birds. They know something is wrong before the soldiers do.",
+   "voice": "audio/voice/re_quiet_1.mp3",
+   "trigger": "react:quiet",
+   "cooldown": 300
+  },
+  {
+   "id": "re_quiet_2",
+   "speaker": "juno",
+   "text": "The jungle's gone quiet. That's on you.",
+   "voice": "audio/voice/re_quiet_2.mp3",
+   "trigger": "react:quiet",
+   "cooldown": 300
+  },
+  {
+   "id": "re_birds_1",
+   "speaker": "juno",
+   "text": "Those birds just told everyone where you are.",
+   "voice": "audio/voice/re_birds_1.mp3",
+   "trigger": "react:birds",
+   "cooldown": 150
+  },
+  {
+   "id": "re_birds_2",
+   "speaker": "juno",
+   "text": "Flock's up. Anyone watching the treeline saw that.",
+   "voice": "audio/voice/re_birds_2.mp3",
+   "trigger": "react:birds",
+   "cooldown": 150
+  },
+  {
+   "id": "re_heat_1",
+   "speaker": "juno",
+   "text": "The flamethrower needs a breath. So do I.",
+   "voice": "audio/voice/re_heat_1.mp3",
+   "trigger": "react:overheat",
+   "cooldown": 120
+  },
+  {
+   "id": "re_vault_1",
+   "speaker": "juno",
+   "text": "Over the top. Show-off.",
+   "voice": "audio/voice/re_vault_1.mp3",
+   "trigger": "react:vault",
+   "cooldown": 400
+  },
+  {
+   "id": "re_ghost_1",
+   "speaker": "juno",
+   "text": "Three down and nobody has noticed. I'm almost impressed.",
+   "voice": "audio/voice/re_ghost_1.mp3",
+   "trigger": "react:ghost",
+   "cooldown": 200
+  },
+  {
+   "id": "re_ghost_2",
+   "speaker": "juno",
+   "text": "You're good at this. I'm not sure that's a compliment.",
+   "voice": "audio/voice/re_ghost_2.mp3",
+   "trigger": "react:ghost",
+   "cooldown": 200
+  },
+  {
+   "id": "re_whiz_1",
+   "speaker": "juno",
+   "text": "That one parted your hair.",
+   "voice": "audio/voice/re_whiz_1.mp3",
+   "trigger": "react:whiz",
+   "cooldown": 150
+  },
+  {
+   "id": "re_whiz_2",
+   "speaker": "juno",
+   "text": "Too close. Move!",
+   "voice": "audio/voice/re_whiz_2.mp3",
+   "trigger": "react:whiz",
+   "cooldown": 150
+  },
+  {
+   "id": "s1_camp_1",
+   "speaker": "kade",
+   "text": "She had a place to sleep. She chose not to use it.",
+   "voice": "audio/voice/s1_camp_1.mp3",
+   "trigger": "scene:s1_camp",
+   "cooldown": 0,
+   "seq": 1
+  },
+  {
+   "id": "s1_graves_1",
+   "speaker": "juno",
+   "text": "They are losing people out here, Kade, and it isn't to you.",
+   "voice": "audio/voice/s1_graves_1.mp3",
+   "trigger": "scene:s1_graves",
+   "cooldown": 0,
+   "seq": 1
+  },
+  {
+   "id": "s1_flags_1",
+   "speaker": "kade",
+   "text": "That's her writing. She was measuring it.",
+   "voice": "audio/voice/s1_flags_1.mp3",
+   "trigger": "scene:s1_flags",
+   "cooldown": 0,
+   "seq": 1
+  },
+  {
+   "id": "s1_flags_2",
+   "speaker": "juno",
+   "text": "Measuring how fast it grows. Or how fast it takes.",
+   "voice": "audio/voice/s1_flags_2.mp3",
+   "trigger": "scene:s1_flags",
+   "cooldown": 0,
+   "seq": 2
+  },
+  {
+   "id": "s2_shrine_1",
+   "speaker": "juno",
+   "text": "Mercenaries, praying. That's new.",
+   "voice": "audio/voice/s2_shrine_1.mp3",
+   "trigger": "scene:s2_shrine",
+   "cooldown": 0,
+   "seq": 1
+  },
+  {
+   "id": "s2_cots_1",
+   "speaker": "kade",
+   "text": "They weren't prisoners.",
+   "voice": "audio/voice/s2_cots_1.mp3",
+   "trigger": "scene:s2_cots",
+   "cooldown": 0,
+   "seq": 1
+  },
+  {
+   "id": "s2_cots_2",
+   "speaker": "juno",
+   "text": "No. That's the part I don't like.",
+   "voice": "audio/voice/s2_cots_2.mp3",
+   "trigger": "scene:s2_cots",
+   "cooldown": 0,
+   "seq": 2
+  },
+  {
+   "id": "s2_drop_1",
+   "speaker": "juno",
+   "text": "Whoever pays for this place doesn't want a paper trail.",
+   "voice": "audio/voice/s2_drop_1.mp3",
+   "trigger": "scene:s2_drop",
+   "cooldown": 0,
+   "seq": 1
+  },
+  {
+   "id": "s3_bench_1",
+   "speaker": "kade",
+   "text": "Mira...",
+   "voice": "audio/voice/s3_bench_1.mp3",
+   "trigger": "scene:s3_bench",
+   "cooldown": 0,
+   "seq": 1
+  },
+  {
+   "id": "s3_bench_2",
+   "speaker": "juno",
+   "text": "Keep it together. We're close.",
+   "voice": "audio/voice/s3_bench_2.mp3",
+   "trigger": "scene:s3_bench",
+   "cooldown": 0,
+   "seq": 2
+  },
+  {
+   "id": "s3_wall_1",
+   "speaker": "juno",
+   "text": "That's not a prisoner counting days. That's someone who stopped wanting to.",
+   "voice": "audio/voice/s3_wall_1.mp3",
+   "trigger": "scene:s3_wall",
+   "cooldown": 0,
+   "seq": 1
+  },
+  {
+   "id": "s3_radio_1",
+   "speaker": "kade",
+   "text": "Nobody was calling for help.",
+   "voice": "audio/voice/s3_radio_1.mp3",
+   "trigger": "scene:s3_radio",
+   "cooldown": 0,
+   "seq": 1
+  },
+  {
+   "id": "s3_radio_2",
+   "speaker": "juno",
+   "text": "Somebody made sure nobody could.",
+   "voice": "audio/voice/s3_radio_2.mp3",
+   "trigger": "scene:s3_radio",
+   "cooldown": 0,
+   "seq": 2
+  },
+  {
    "id": "bark_alert_a_1",
    "speaker": "soldier_a",
    "text": "Contact!",
@@ -1075,6 +1400,86 @@
    "text": "Check the bushes.",
    "voice": "audio/voice/bark_search_c_1.mp3",
    "trigger": "bark:search",
+   "cooldown": 8
+  },
+  {
+   "id": "bark_investigate_a_1",
+   "speaker": "soldier_a",
+   "text": "What was that?",
+   "voice": "audio/voice/bark_investigate_a_1.mp3",
+   "trigger": "bark:investigate",
+   "cooldown": 8
+  },
+  {
+   "id": "bark_investigate_a_2",
+   "speaker": "soldier_a",
+   "text": "Stay here. I'll look.",
+   "voice": "audio/voice/bark_investigate_a_2.mp3",
+   "trigger": "bark:investigate",
+   "cooldown": 8
+  },
+  {
+   "id": "bark_investigate_b_1",
+   "speaker": "soldier_b",
+   "text": "Something moved.",
+   "voice": "audio/voice/bark_investigate_b_1.mp3",
+   "trigger": "bark:investigate",
+   "cooldown": 8
+  },
+  {
+   "id": "bark_investigate_c_1",
+   "speaker": "soldier_c",
+   "text": "Probably nothing. Probably.",
+   "voice": "audio/voice/bark_investigate_c_1.mp3",
+   "trigger": "bark:investigate",
+   "cooldown": 8
+  },
+  {
+   "id": "bark_body_a_1",
+   "speaker": "soldier_a",
+   "text": "Man down! We've got a body!",
+   "voice": "audio/voice/bark_body_a_1.mp3",
+   "trigger": "bark:body",
+   "cooldown": 8
+  },
+  {
+   "id": "bark_body_b_1",
+   "speaker": "soldier_b",
+   "text": "Ortiz? Ortiz!",
+   "voice": "audio/voice/bark_body_b_1.mp3",
+   "trigger": "bark:body",
+   "cooldown": 8
+  },
+  {
+   "id": "bark_body_c_1",
+   "speaker": "soldier_c",
+   "text": "He's dead. Sound the alarm!",
+   "voice": "audio/voice/bark_body_c_1.mp3",
+   "trigger": "bark:body",
+   "cooldown": 8
+  },
+  {
+   "id": "bark_surrender_a_1",
+   "speaker": "soldier_a",
+   "text": "Don't shoot! I'm done!",
+   "voice": "audio/voice/bark_surrender_a_1.mp3",
+   "trigger": "bark:surrender",
+   "cooldown": 8
+  },
+  {
+   "id": "bark_surrender_b_1",
+   "speaker": "soldier_b",
+   "text": "I give up! I give up!",
+   "voice": "audio/voice/bark_surrender_b_1.mp3",
+   "trigger": "bark:surrender",
+   "cooldown": 8
+  },
+  {
+   "id": "bark_surrender_c_1",
+   "speaker": "soldier_c",
+   "text": "Enough. I'm not dying for a flower.",
+   "voice": "audio/voice/bark_surrender_c_1.mp3",
+   "trigger": "bark:surrender",
    "cooldown": 8
   }
  ],
@@ -1390,5 +1795,88 @@
    }
   ]
  },
+ "scenes": [
+  {
+   "id": "s1_camp",
+   "level": 0,
+   "z": -88,
+   "x": -10.5,
+   "kind": "camp",
+   "title": "A cold camp",
+   "text": "Two bedrolls. One has been slept in. The other is still folded, with M.V. inked on the strap."
+  },
+  {
+   "id": "s1_graves",
+   "level": 0,
+   "z": -150,
+   "x": 10.5,
+   "kind": "graves",
+   "title": "Three helmets",
+   "text": "Three stakes, three helmets, fresh earth. The soldiers bury their own and do not mark the names."
+  },
+  {
+   "id": "s1_flags",
+   "level": 0,
+   "z": -205,
+   "x": -10,
+   "kind": "flags",
+   "title": "Survey line",
+   "text": "Survey flags in a row, each tagged in Mira's handwriting: soil, water, bloom spread. The last tag only says: faster than last month."
+  },
+  {
+   "id": "s2_shrine",
+   "level": 1,
+   "z": -60,
+   "x": 10.5,
+   "kind": "shrine",
+   "title": "An old shrine",
+   "text": "Fresh fruit in a bowl older than the ruins. Somebody still leaves offerings at a shrine nobody admits to visiting."
+  },
+  {
+   "id": "s2_cots",
+   "level": 1,
+   "z": -150,
+   "x": -10.5,
+   "kind": "cots",
+   "title": "The quiet ward",
+   "text": "Six cots under a tarp. None of these men were wounded. Every chart says the same thing: calm, compliant, will not leave."
+  },
+  {
+   "id": "s2_drop",
+   "level": 1,
+   "z": -200,
+   "x": 10.5,
+   "kind": "drop",
+   "title": "A drop that missed",
+   "text": "Supply crates half sunk in the mud. A company name stencilled on, painted out, and a second name painted over that."
+  },
+  {
+   "id": "s3_bench",
+   "level": 2,
+   "z": -84,
+   "x": -10.5,
+   "kind": "bench",
+   "title": "Mira's field bench",
+   "text": "Sample jars, each brighter than the last. In the margin of the log: it wants to be looked after. I am not sure that is a metaphor any more."
+  },
+  {
+   "id": "s3_wall",
+   "level": 2,
+   "z": -162,
+   "x": 10.5,
+   "kind": "wall",
+   "title": "The count",
+   "text": "Someone kept a tally on this wall. Days, then weeks. The marks stop, and under them one line: why would I go?"
+  },
+  {
+   "id": "s3_radio",
+   "level": 2,
+   "z": -206,
+   "x": -10.5,
+   "kind": "radio",
+   "title": "The long-range set",
+   "text": "The outpost's radio, opened up with an axe. Whoever did it coiled the cables neatly afterwards."
+  }
+ ],
  "voiceFiles": []
 }
