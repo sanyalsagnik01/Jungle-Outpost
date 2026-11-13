@@ -35,7 +35,7 @@ function tone(o) {
   if (o.f2) osc.frequency.exponentialRampToValueAtTime(o.f2, t + o.dur);
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, o.vol), t + (o.a || 0.006));
   g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
-  osc.connect(g); g.connect(o.dest || sfx); osc.start(t); osc.stop(t + o.dur + 0.05);
+  osc.connect(g); g.connect(o.dest || A.dest || sfx); osc.start(t); osc.stop(t + o.dur + 0.05);
 }
 function noise(o) {
   var t = ctx.currentTime + (o.delay || 0), src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
@@ -43,7 +43,7 @@ function noise(o) {
   f.frequency.setValueAtTime(o.f, t); if (o.f2) f.frequency.exponentialRampToValueAtTime(o.f2, t + o.dur);
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, o.vol), t + (o.a || 0.004));
   g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
-  src.connect(f); f.connect(g); g.connect(o.dest || sfx); src.start(t, Math.random() * 1.5); src.stop(t + o.dur + 0.05);
+  src.connect(f); f.connect(g); g.connect(o.dest || A.dest || sfx); src.start(t, Math.random() * 1.5); src.stop(t + o.dur + 0.05);
 }
 
 var S = {
@@ -125,6 +125,7 @@ A.syllable = function (pitch, vol, radio) {
 };
 // positional falloff relative to the player
 A.playAt = function (name, x, z, vol) {
+  if (JO.Sound && JO.Sound.playAt(name, x, z, vol)) return;      // positional voice with pan, occlusion and reverb (sound.js)
   var P = JO.Player; if (!P) return A.play(name, vol);
   var d = Math.hypot(x - P.pos.x, z - P.pos.z), v = 1 - d / 70; if (v <= 0.02) return;
   A.play(name, (vol === undefined ? 1 : vol) * v * v);
@@ -177,7 +178,7 @@ A.update = function (dt) {
       if (cb > 0.3) { if (s % 4 === 0) tone({ f: 110, f2: 45, dur: 0.14, vol: 0.4 * cb, type: 'sine', delay: d, dest: music });
         if (s % 8 === 4) noise({ dur: 0.1, vol: 0.16 * cb, f: 1700, type: 'bandpass', delay: d, dest: music });
         if (cb > 0.6) tone({ f: ARP[(s * 3) % 16] * 0.5, dur: sl * 0.7, vol: 0.035 * cb, type: 'square', delay: d, dest: music }); }
-      if (A.tense && s % 8 < 2) tone({ f: 58, f2: 40, dur: 0.12, vol: 0.5, type: 'sine', delay: d, dest: music });      // low health: a heartbeat under everything
+      if (A.tense && !A.heartOwned && s % 8 < 2) tone({ f: 58, f2: 40, dur: 0.12, vol: 0.5, type: 'sine', delay: d, dest: music });      // low health: a heartbeat under everything
       if (b) tone({ f: b, dur: sl * 1.6, vol: 0.2, type: 'triangle', delay: d, dest: music });
       if (s % 2 === 0) noise({ dur: 0.03, vol: 0.035, f: 6500, type: 'highpass', delay: d, dest: music });
       if (s === 12) tone({ f: 82, f2: 60, dur: 0.3, vol: 0.2, type: 'sine', delay: d, dest: music });
