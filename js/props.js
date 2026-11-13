@@ -51,7 +51,7 @@ Pr.reserve = function (L, reserve) {
 function addBarrel(x, z) {
   var m = mats(), g = group(x, z); mesh(G.cyl, m.red, 0.9, 1.25, 0.9, 0, 0.63, 0, g); mesh(G.cyl, m.band, 0.94, 0.1, 0.94, 0, 0.3, 0, g); mesh(G.cyl, m.band, 0.94, 0.1, 0.94, 0, 0.95, 0, g);
   mesh(G.box, m.haz, 0.5, 0.3, 0.05, 0, 0.63, 0.44, g); mesh(G.box, m.haz, 0.5, 0.3, 0.05, 0, 0.63, -0.44, g);
-  Pr.list.push({ kind: 'barrel', x: x, z: z, hp: 18, alive: true, g: g, col: W.addBox(x, z, 0.45, 0.45, 1.25), fuse: -1, hy: 1.25 });
+  Pr.list.push({ kind: 'barrel', x: x, z: z, hp: 18, alive: true, g: g, col: W.addBox(x, z, 0.45, 0.45, 1.25, { mat: 'metal' }), fuse: -1, hy: 1.25 });
 }
 function addCrate(x, z) {
   var m = mats(), g = group(x, z); mesh(G.box, m.wood, 1.2, 1.2, 1.2, 0, 0.6, 0, g);
@@ -148,10 +148,10 @@ function destroy(p, by) {
   if (p.kind === 'barrel') JO.Arsenal.blast(p.x, 0.8, p.z, 5, 130, 0.45);
   else { FX.burst(p.x, 0.7, p.z, 16, 0xb88a52, 5, 0.7, 9, 0.2, 3); A.playAt('clang', p.x, p.z, 0.8);
     JO.Perks.addSalvage(6, p.x, 1.6, p.z); if (((p.x * 13 + p.z * 7) | 0) % 3 === 0) JO.Game.spawnPickup('ammo', p.x, p.z); }
-  Ev.emit('prop_destroyed', p.kind, by);
+  Ev.emit('prop_destroyed', p.kind, by, p.x, p.z);
 }
 function drop(p, by) { if (p.state !== 'hang') return; p.state = 'fall'; p.vy = 0; if (p.rope) p.rope.visible = false; if (p.ropes) p.ropes.forEach(function (r) { r.visible = false; });
-  A.playAt('slash', p.x, p.z, 1.2); Ev.emit('noise', p.x, p.z, 12); Ev.emit('prop_destroyed', p.kind, by); }
+  A.playAt('slash', p.x, p.z, 1.2); Ev.emit('noise', p.x, p.z, 12); Ev.emit('prop_destroyed', p.kind, by, p.x, p.z); }
 function land(p) {
   p.state = 'down'; var gant = p.kind === 'gantry', rx = gant ? 7.5 : 2.4, rz = gant ? 1.9 : 1.6, L = E.list, P = JO.Player, i, hit = 0;
   FX.burst(p.x, 0.5, p.z, 26, 0xc8b890, 6, 0.8, 8, 0.24, 3); FX.addShake(0.5); A.playAt('stomp', p.x, p.z, 1); Ev.emit('noise', p.x, p.z, 30);

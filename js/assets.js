@@ -218,7 +218,7 @@ MP.addWire = function (mat) {
 MP.setDissolve = function (k) { this.uDissolve.value = k < 0 ? 0 : (k > 1 ? 1 : k); };
 MP.socket = function (name) { return this.nodes[name] || this.nodes[name.replace(/\./g, '')] || null; };
 MP.update = function (dt) {
-  var k, L;
+  var k, L; if (this.limp) return;
   if (this.mixer) {
     // one-shot weight envelope (fast in, eased out); held shots stay at full weight
     var sw = 0;

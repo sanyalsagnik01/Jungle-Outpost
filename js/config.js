@@ -163,7 +163,7 @@ JO.CFG = {
     {
       sub: 'LEVEL 2', name: 'DROWNED RUINS', seed: 23, len: 240, boss: 'phantom', barrier: 'fog',
       story: 'Dusk. Mist rolls off the river and something moves in the old temple that you cannot quite see. Mercenaries have dug in with grenades and drones. Cross the bridge. Find THE PHANTOM.',
-      river: { z0: -122, z1: -108 }, arenaWater: true,
+      river: { z0: -108, z1: -122 }, arenaWater: true,
       pal: {
         skyTop: 0x24465c, fog: 0x7ea8a2, fogNear: 16, fogFar: 92,
         ground: [0x2f5a48, 0x376653, 0x2a5044], path: 0x6a7460, arena: 0x5e6f6a,

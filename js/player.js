@@ -175,7 +175,7 @@ var Cam = JO.Cam = { x: 0, y: 2, z: 5, fx: 0, fy: 0, fz: -1, rx: 1, rz: 0, ux: 0
 Cam.compute = function (alpha, frameDt) {
   var px = P.prev.x + (P.pos.x - P.prev.x) * alpha, py = P.prev.y + (P.pos.y - P.prev.y) * alpha, pz = P.prev.z + (P.pos.z - P.prev.z) * alpha;
   if (frameDt) { var tk = (I.ads && !P.dead) ? 1 : 0; Cam.adsK += (tk - Cam.adsK) * Math.min(1, frameDt * 12); }
-  var k = Cam.adsK, pitch = P.pitch + P.kick, cp = Math.cos(pitch), sp = Math.sin(pitch), sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
+  var k = Cam.adsK, Ph = JO.Phys, pitch = P.pitch + P.kick + (Ph ? Ph.swayY * k : 0), yw = P.yaw + (Ph ? Ph.swayX * k : 0), cp = Math.cos(pitch), sp = Math.sin(pitch), sy = Math.sin(yw), cy = Math.cos(yw);
   var fx = sy * cp, fy = sp, fz = cy * cp, rx = -cy, rz = sy;
   var want = (P.driving ? 7.8 : 4.7) - 2.2 * k, sh = 0.95 + 0.05 * k;
   Cam.eye += ((P.driving ? 2.5 : (P.crouch ? 1.2 : 1.58)) - Cam.eye) * (frameDt ? Math.min(1, frameDt * 10) : 0);
@@ -259,7 +259,7 @@ Wp.update = function (dt) {
   if (Wp.reloading > 0) { Wp.reloading -= dt;
     if (Wp.reloading <= 0) { var need = Wp.magSize(Wp.cur) - s.mag, take = Math.min(need, s.reserve); s.mag += take; s.reserve -= take; A.play('reloadEnd'); } }
   if (I.reloadPressed) startReload();
-  if (I.fire && Wp.cd <= 0 && Wp.reloading <= 0 && P.rolling <= 0) {
+  if (I.fire && Wp.cd <= 0 && Wp.reloading <= 0 && P.rolling <= 0 && !(s.cfg.kind === 'flame' && JO.Phys && JO.Phys.overheated)) {
     if (s.mag > 0) shoot(s);
     else { if (s.reserve > 0) startReload(); else { A.play('empty'); Wp.cd = 0.3;
       if (Wp.cur !== 0 && (Wp.slots[0].mag > 0 || Wp.slots[0].reserve > 0)) trySwitch(1); } }
@@ -306,8 +306,9 @@ function shoot(s) {
       else if (r.dealt > 0) { anyHit = true; if (r.head) head = true; if (r.crit) crit = true; if (r.killed) killed = true;
         FX.burst(ex, ey, ez, 5, HIT.enemy.spark || 0xff5030, 3.5, 0.3, 9, 0.11); add(HIT.enemy, r.dealt, ex, ey, ez, r.head ? 1 : (r.crit ? 2 : 0)); }
     } else if (HIT.missile) { anyHit = true; JO.Haz.shootMissile(HIT.missile); }
-    else if (HIT.t < c.range) FX.burst(ex, ey, ez, 3, 0xc8b890, 2.5, 0.28, 8, 0.1);
+    else if (HIT.t < c.range) { if (JO.Phys) JO.Phys.impact(ex, ey, ez, dx, dy, dz, c); else FX.burst(ex, ey, ez, 3, 0xc8b890, 2.5, 0.28, 8, 0.1); }
   }
+  if (JO.Phys) JO.Phys.shot(c, mx, my, mz);
   function add(e, d, x, y, z, f) { for (var q = 0; q < n; q++) if (accE[q] === e && (accF[q] === 3) === (f === 3)) { accD[q] += d; if (f && f !== 3) accF[q] = f; return; }
     accE[n] = e; accD[n] = d; accX[n] = x; accY[n] = y; accZ[n] = z; accF[n] = f; n++; }
   for (var q = 0; q < n; q++) { var f = accF[q];

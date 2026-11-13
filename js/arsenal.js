@@ -80,7 +80,8 @@ Ar.blast = function (x, y, z, radius, dmg, selfK) {
     var amt = dmg * (1 - 0.65 * d / reach);
     if (d > 0.8) { var oy = Math.max(y, 0.2) + 0.4, qy = e.pos.y + (e.boundY || 1) - oy, l = Math.sqrt(ex * ex + qy * qy + ez * ez) || 1;
       if (W.raycast(x, oy, z, ex / l, qy / l, ez / l, l) < l - (e.isBoss ? 3 : 0.6)) amt *= 0.3; }
-    var dealt = Ar.hurt(e, amt); if (dealt > 0) JO.UI.dmgNum(e.pos.x, e.pos.y + 2, e.pos.z, '' + Math.round(dealt), 'crit');
+    var hl = Math.hypot(ex, ez) || 1; e.pushX = ex / hl; e.pushZ = ez / hl; e.pushF = amt;                 // if this kills him, he is thrown (physical.js)
+    var dealt = Ar.hurt(e, amt); if (e.alive) e.pushF = 0; if (dealt > 0) JO.UI.dmgNum(e.pos.x, e.pos.y + 2, e.pos.z, '' + Math.round(dealt), 'crit');
   }
   if (selfK) { var px = P.pos.x - x, py = P.pos.y + 0.9 - y, pz = P.pos.z - z, pd = Math.sqrt(px * px + py * py + pz * pz);
     if (pd < radius) P.damage(dmg * selfK * (1 - 0.6 * pd / radius), x, z, 'own blast'); }
@@ -107,6 +108,7 @@ Ar.flame = function (c, mx, my, mz) {
   var ox = P.pos.x, oy = P.pos.y + 1.35, oz = P.pos.z, wall = W.raycast(mx, my, mz, Cam.fx, Cam.fy, Cam.fz, c.range);
   for (i = 0; i < 3; i++) { var d = Math.min(wall, 1 + Math.random() * (c.range - 1));
     FX.burst(mx + Cam.fx * d, my + Cam.fy * d, mz + Cam.fz * d, 1, i ? 0xff7a18 : 0xffd24a, 1.6 + d * 0.25, 0.32, -3, 0.3 + d * 0.06, 0.4); }
+  if (JO.Phys) JO.Phys.flameTick(c, mx, my, mz);
   for (i = L.length - 1; i >= 0; i--) { var e = L[i]; if (!e || !e.alive || !e.active) continue;
     var ex = e.pos.x - ox, ey = e.pos.y + (e.boundY || 1) - oy, ez = e.pos.z - oz, dd = Math.sqrt(ex * ex + ey * ey + ez * ez) || 0.01, rad = e.isBoss ? (e.radius || 1.2) : 0.5;
     if (dd > c.range + rad) continue;

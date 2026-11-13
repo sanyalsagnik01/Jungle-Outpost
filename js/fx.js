@@ -18,7 +18,7 @@ var PN = 800, pPos, pCol, pSize, pVel, pLife, pMax, pGrav, pBase, pPts, pNext = 
 var TN = 48, tMesh, tSeg = new Float32Array(TN * 6), tLife = new Float32Array(TN), tMax = new Float32Array(TN), tW = new Float32Array(TN), tNext = 0;
 /* ---------- enemy projectiles ---------- */
 var BN = 220, bMesh, bAct = new Uint8Array(BN), bP = new Float32Array(BN * 3), bV = new Float32Array(BN * 3), bQ = new Float32Array(BN * 4),
-  bLife = new Float32Array(BN), bDmg = new Float32Array(BN), bGrav = new Float32Array(BN), bSize = new Float32Array(BN), bO = new Float32Array(BN * 2), bNext = 0;
+  bLife = new Float32Array(BN), bDmg = new Float32Array(BN), bGrav = new Float32Array(BN), bSize = new Float32Array(BN), bO = new Float32Array(BN * 2), bNear = new Uint8Array(BN), bNext = 0;
 var rings = [], lines = [], flashes = [], muzzle, muzzleLight, muzzleT = 0;
 
 FX.init = function (sc) {
@@ -110,7 +110,7 @@ FX.bullet = function (x, y, z, dx, dy, dz, speed, dmg, hex, grav, size, life) {
   for (k = 0; k < BN; k++) { var j = (bNext + k) % BN; if (!bAct[j]) { i = j; break; } }
   if (i < 0) return; bNext = (i + 1) % BN;
   bAct[i] = 1; bP[i * 3] = x; bP[i * 3 + 1] = y; bP[i * 3 + 2] = z; bV[i * 3] = dx * speed; bV[i * 3 + 1] = dy * speed; bV[i * 3 + 2] = dz * speed;
-  bLife[i] = life || 3.2; bDmg[i] = dmg; bGrav[i] = grav || 0; bSize[i] = size || 1; bO[i * 2] = x; bO[i * 2 + 1] = z;
+  bNear[i] = 0; bLife[i] = life || 3.2; bDmg[i] = dmg; bGrav[i] = grav || 0; bSize[i] = size || 1; bO[i * 2] = x; bO[i * 2 + 1] = z;
   dummy.position.set(0, 0, 0); dummy.lookAt(dx, dy, dz); bQ[i * 4] = dummy.quaternion.x; bQ[i * 4 + 1] = dummy.quaternion.y; bQ[i * 4 + 2] = dummy.quaternion.z; bQ[i * 4 + 3] = dummy.quaternion.w;
   bMesh.setColorAt(i, col.setHex(hex || 0xffd060)); bMesh.instanceColor.needsUpdate = true;
 };
@@ -128,8 +128,9 @@ FX.updateBullets = function (dt) {
       if (s < 0) s = 0; else if (s > t) s = t;
       var cx = x + dx * s - P.pos.x, cy = y + dy * s - P.pos.y, cz = z + dz * s - P.pos.z;
       if (cx * cx + cz * cz < 0.27 && cy > -0.1 && cy < 1.9) { if (P.damage(bDmg[i], bO[i * 2], bO[i * 2 + 1], 'bullet')) { dead = true; FX.burst(x + dx * s, y + dy * s, z + dz * s, 4, 0xff4030, 3, 0.25); } }
+      else if (!bNear[i] && s > 0 && s < t && cx * cx + cz * cz < 2.4 && cy > -0.4 && cy < 2.5) { bNear[i] = 1; if (JO.Phys) JO.Phys.nearMiss(x + dx * s, z + dz * s); }
     }
-    if (!dead && t < dist) { dead = true; FX.burst(x + dx * t, y + dy * t, z + dz * t, 3, 0xd8c8a0, 2.5, 0.25); }
+    if (!dead && t < dist) { dead = true; if (JO.Phys) JO.Phys.impact(x + dx * t, y + dy * t, z + dz * t, dx, dy, dz, null); else FX.burst(x + dx * t, y + dy * t, z + dz * t, 3, 0xd8c8a0, 2.5, 0.25); }
     if (dead) { bAct[i] = 0; bMesh.setMatrixAt(i, ZERO); continue; }
     bP[o] = x + vx * dt; bP[o + 1] = y + vy * dt; bP[o + 2] = z + vz * dt;
   }

@@ -64,7 +64,7 @@ W.updateSun = function (px, pz) {
 
 /* ---------- colliders ---------- */
 W.addBox = function (x, z, hx, hz, h, o) {
-  var c = { minx: x - hx, maxx: x + hx, minz: z - hz, maxz: z + hz, y0: (o && o.y0) || 0, h: h, on: true };
+  var c = { minx: x - hx, maxx: x + hx, minz: z - hz, maxz: z + hz, y0: (o && o.y0) || 0, h: h, on: true, mat: (o && o.mat) || '' };
   W.colliders.push(c);
   if (o && o.cover) W.cover.push({ x: x, z: z, r: Math.max(hx, hz) });
   return c;
@@ -273,7 +273,7 @@ W.build = function (L) {
   function rock(x, z, s) {
     if (GL('env_rock')) b.addModel('env_rock', x, 0, z, s * 0.94, s * 1.05, s * 0.94, 0, vr() * 6, 0.8 + vr() * 0.3);
     else b.add('rock', x, s * 0.42, z, s * 1.7, s * 1.15, s * 1.7, shade(STONE, 0.85 + vr() * 0.3), vr() * 6, vr() * 0.4);
-    W.addBox(x, z, s * 0.62, s * 0.62, s * 0.9, { cover: s > 1.15 });
+    W.addBox(x, z, s * 0.62, s * 0.62, s * 0.9, { cover: s > 1.15, mat: 'stone' });
   }
   function sandbag(x, z, rot) {
     if (GL('env_sandbag')) b.addModel('env_sandbag', x, 0, z, 1, 1.02, 1, 0, rot ? Math.PI / 2 : 0, 0.9 + vr() * 0.2);
@@ -281,7 +281,7 @@ W.build = function (L) {
       for (var row = 0; row < 3; row++) for (var k = -1; k <= 1; k++) { var off = k * 0.98 + (row % 2 ? 0.45 : 0);
         if (row === 2 && k === 1) continue;
         b.add('box', x + lx * off, 0.21 + row * 0.42, z + lz * off, rot ? 0.72 : 0.94, 0.4, rot ? 0.94 : 0.72, shade(SAND, 0.85 + vr() * 0.25), (vr() - 0.5) * 0.1); } }
-    W.addBox(x, z, rot ? 0.42 : 1.55, rot ? 1.55 : 0.42, 1.27, { cover: true });
+    W.addBox(x, z, rot ? 0.42 : 1.55, rot ? 1.55 : 0.42, 1.27, { cover: true, mat: 'sand' });
   }
   function crateStack(x, z, tall) {
     var s = 1.3, glb = GL('env_crate'), two = tall || rng() < 0.4, side = !tall && rng() < 0.6, x2 = x + (rng() < 0.5 ? -1.36 : 1.36);
@@ -297,14 +297,14 @@ W.build = function (L) {
     for (var k = 0; k < segs; k++) { var h = 1.5 + rng() * 2.2, o = (k - (segs - 1) / 2) * 1.7, px = x + (rot ? 0 : o), pz = z + (rot ? o : 0);
       if (glb) b.addModel('env_wall', px, 0, pz, 1, h / 2.5, 1, 0, rot ? Math.PI / 2 : 0, 0.8 + vr() * 0.3);
       else { b.add('box', px, h / 2, pz, rot ? 0.8 : 1.7, h, rot ? 1.7 : 0.8, shade(STONE, 0.8 + vr() * 0.3)); if (vr() < 0.5) b.add('box', px, h + 0.2, pz, 0.7, 0.4, 0.7, shade(STONE, 0.7), vr()); }
-      W.addBox(px, pz, rot ? 0.4 : 0.85, rot ? 0.85 : 0.4, h); }
+      W.addBox(px, pz, rot ? 0.4 : 0.85, rot ? 0.85 : 0.4, h, { mat: 'stone' }); }
     W.cover.push({ x: x, z: z, r: 1.2 });
   }
   function pillar(x, z, h, wd) {
     wd = wd || 2.2;
     if (GL('env_pillar')) b.addModel('env_pillar', x, 0, z, wd / 2.2, h / 6.2, wd / 2.2, 0, ((vr() * 4) | 0) * Math.PI / 2, 0.85 + vr() * 0.2);
     else { b.add('box', x, h / 2, z, wd, h, wd, shade(STONE, 0.85 + vr() * 0.2)); b.add('box', x, 0.25, z, wd + 0.5, 0.5, wd + 0.5, shade(STONE, 0.7)); b.add('box', x, h + 0.2, z, wd + 0.4, 0.4, wd + 0.4, shade(STONE, 0.95), vr() * 0.3); }
-    W.addBox(x, z, wd / 2, wd / 2, h, { cover: true }); W.arena.pillars.push({ x: x, z: z });
+    W.addBox(x, z, wd / 2, wd / 2, h, { cover: true, mat: 'stone' }); W.arena.pillars.push({ x: x, z: z });
   }
   function tower(x, z) {
     if (GL('env_tower')) b.addModel('env_tower', x, 0, z, 1, 1, 1, 0, 0, 1);

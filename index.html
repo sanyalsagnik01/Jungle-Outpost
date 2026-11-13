@@ -181,6 +181,7 @@ body.touch #minimap{top:150px}
 .ach b{display:block;font-family:var(--head);font-weight:normal;letter-spacing:2px;font-size:15px;color:var(--bone)}.ach.got b{color:#ffd060}.ach small{font-size:12px;opacity:.85}
 body.cb{--red:#ffe600;--cyan:#7ab8ff}body.cb #hpFill{background:linear-gradient(90deg,#b08a00,#ffe600)}
 body.cb #vignette{background:radial-gradient(ellipse at center,rgba(255,230,0,0) 45%,rgba(255,220,0,.7) 100%)}
+#heat{margin-top:6px}#heatFill{background:linear-gradient(90deg,#ffd24a,#ff7a18);transform:scaleX(0)}
 #hudNades{margin-top:5px;font-size:11px;letter-spacing:1px;opacity:.85}#hudSalvage{font-size:12px;margin-top:3px;color:var(--amber)}
 #benchSalvage{font-family:var(--head);font-size:26px;letter-spacing:4px;color:var(--amber);margin:-6px 0 4px}
 #benchBody{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:min(1100px,96vw);max-height:56vh;overflow:auto;padding:2px}
@@ -257,7 +258,7 @@ body.touch #prompt{top:40%}
   </div>
   <div id="hudBR" class="panel"><div id="wName"></div><div id="wAmmo"></div>
     <div id="slots"><span id="s1">1 AR</span><span id="s2">2 SG</span><span id="s3">3 MR</span><span id="s4">4 XB</span><span id="s5">5 FT</span></div>
-    <div id="hudNades"></div></div>
+    <div class="bar thin hidden" id="heat"><i id="heatFill"></i></div><div id="hudNades"></div></div>
   <div id="stealth" class="hidden"><div id="stealthBar"><i id="stealthFill"></i></div><span id="stealthTxt"></span></div>
   <div id="banner"></div>
   <div id="reloadTxt" class="hidden">RELOADING</div>
@@ -457,6 +458,7 @@ body.touch #prompt{top:40%}
 <script src="js/foliage.js"></script>
 <script src="js/wildlife.js"></script>
 <script src="js/ambience.js"></script>
+<script src="js/physical.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

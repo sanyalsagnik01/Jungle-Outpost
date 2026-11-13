@@ -30,7 +30,7 @@ E.los = los;
 // steering move with stuck detection (side-steps around whatever blocks the way)
 function moveToward(e, tx, tz, speed, dt) {
   var dx = tx - e.pos.x, dz = tz - e.pos.z, d = Math.hypot(dx, dz); if (d < 0.05) return d;
-  dx /= d; dz /= d;
+  dx /= d; dz /= d; if (e.slowT > 0) speed *= 0.55;
   if (e.avoidT > 0) { var s = e.avoidSide * 1.15, c = Math.cos(s), sn = Math.sin(s), nx = dx * c - dz * sn; dz = dx * sn + dz * c; dx = nx; e.avoidT -= dt; }
   var px = e.pos.x, pz = e.pos.z, st = Math.min(d, speed * dt);
   e.pos.x += dx * st; e.pos.z += dz * st;
@@ -115,6 +115,7 @@ EP.spawn = function (x, z, o) {
   if (this.type === 'drone') this.pos.y = 4;
   for (var i = 0; i < this.mats.length; i++) { var m = this.mats[i]; m.transparent = false; m.opacity = 1; m.emissive.setHex(0); m.needsUpdate = true; }
   this.emis = 0; this.mesh.visible = true; this.mesh.rotation.set(0, this.yaw, 0); this.mesh.position.copy(this.pos); this.mesh.scale.setScalar(1);
+  this.rag = false; this.cull = 0; this.slowT = 0; this.pushF = 0; this.hdx = this.hdz = 0; if (this.gfx) this.gfx.limp = false;
   this._sub = ''; this._deathAnim = false; this.spd = 0; this._ax = x; this._az = z;
   if (this.gfx) { this.gfx.reset(); this.gfx.play(this.type === 'drone' ? 'hover' : 'idle', 1); if (this.gun) this.gun.root.visible = true; }
   return this;
@@ -130,6 +131,7 @@ EP.takeHit = function (dmg, part, dx, dz, hy, headMult) {
   if (this.type === 'shield' && !this.shieldOpen && hy > this.pos.y + 0.6) {
     if (dx * Math.sin(this.yaw) + dz * Math.cos(this.yaw) < -0.3) { R.blocked = true; this.alerted = true; return R; } }
   if (part.tag === 'head') { dmg *= headMult; R.head = true; }
+  this.hdx = dx; this.hdz = dz; if (part.tag === 'body' && hy < this.pos.y + 0.55 && hy > this.pos.y && this.type !== 'drone' && (dx || dz)) this.slowT = 1.6;      // a leg hit: he limps
   this.hp -= dmg; R.dealt = dmg; this.flash = 0.09; this.alerted = true;
   if (this.gfx) { this.gfx.flash(0x8a8a8a, 0.09); if (this.hp > 0 && this.sub !== 'windup' && this.sub !== 'throw') this.gfx.playOnce('hit'); }
   if (this.hp <= 0) { this.die(); R.killed = true; }
@@ -146,6 +148,7 @@ EP.hideLaser = function () { if (this.laser) this.laser.visible = this.dot.visib
 EP.die = function () {
   this.alive = false; this.state = 'dead'; this.deadT = 0; this.vy = 2; this.hideLaser();
   for (var i = 0; i < this.mats.length; i++) { this.mats[i].transparent = true; this.mats[i].needsUpdate = true; }
+  if (JO.Phys) JO.Phys.onDie(this);
   JO.Game.onKill(this); JO.Events.emit('enemy_die', this);
 };
 EP.deadUpdate = function (dt) {
@@ -157,6 +160,7 @@ EP.deadUpdate = function (dt) {
     if (this.pos.y <= 0.3) { H.explode(this.pos.x, 0.4, this.pos.z, 2.6, 8); E.release(this); }
     return;
   }
+  if (this.rag && JO.Phys) { JO.Phys.ragUpdate(this, dt); return; }      // leaves a body (physical.js)
   if (this.pos.y > 0) this.pos.y = Math.max(0, this.pos.y - dt * 10);
   if (this.gfx) {                                                  // death clip, then dissolve
     if (!this._deathAnim) { this._deathAnim = true; this.gfx.playOnce('death', { full: true, hold: true }); if (this.gun) this.gun.root.visible = false; }
@@ -170,7 +174,7 @@ EP.deadUpdate = function (dt) {
 };
 EP.update = function (dt) {
   if (!this.alive) { this.deadUpdate(dt); return; }
-  var P = JO.Player; this.t += dt;
+  var P = JO.Player; this.t += dt; if (this.slowT > 0) this.slowT -= dt;
   var dx = P.pos.x - this.pos.x, dz = P.pos.z - this.pos.z; this.dist = Math.hypot(dx, dz) || 0.001; this.ndx = dx / this.dist; this.ndz = dz / this.dist;
   this.losT -= dt; if (this.losT <= 0) { this.losT = 0.2 + Math.random() * 0.1; this.see = !P.dead && this.dist < this.cfg.sight * 1.25 * E.sightK && los(this); }
   if (this.see) this.seenT = 0; else this.seenT += dt;
@@ -283,7 +287,8 @@ AI.sniper = function (e, dt) {
     FX.tracer(mx, my, mz, mx + dx * t, my + dy * t, mz + dz * t, 0xff6040, 0.11, 0.22); A.playAt('sniperShot', e.pos.x, e.pos.z, 1.4);
     FX.burst(mx + dx * t, my + dy * t, mz + dz * t, 8, 0xffc890, 4, 0.3);
     var px = P.pos.x - mx, py = P.pos.y + 0.95 - my, pz = P.pos.z - mz, s = px * dx + py * dy + pz * dz;
-    if (s > 0 && s < t + 0.3) { var qx = px - dx * s, qy = py - dy * s, qz = pz - dz * s; if (qx * qx + qz * qz < 0.42 && Math.abs(qy) < 1.05) P.damage(c.dmg, e.pos.x, e.pos.z, 'sniper'); }
+    if (s > 0 && s < t + 0.3) { var qx = px - dx * s, qy = py - dy * s, qz = pz - dz * s; if (qx * qx + qz * qz < 0.42 && Math.abs(qy) < 1.05) P.damage(c.dmg, e.pos.x, e.pos.z, 'sniper'); else if (qx * qx + qz * qz < 5 && JO.Phys) JO.Phys.nearMiss(P.pos.x, P.pos.z); }
+    if (JO.Phys && t < 169) JO.Phys.impact(mx + dx * t, my + dy * t, mz + dz * t, dx, dy, dz, null);
     e.sub = 'cool'; e.cd = c.cooldown * (0.9 + Math.random() * 0.25); e.hideLaser();
   }
 };
