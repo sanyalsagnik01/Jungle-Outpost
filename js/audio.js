@@ -104,7 +104,7 @@ A.surface = function (P) { var W = JO.World, x = P.pos.x, z = P.pos.z, L = W.lev
   if (z < W.A0 + 1) return 'stepStone';
   return Math.abs(x - Math.sin(z * 0.07) * 1.2) < 2.8 ? 'step' : 'stepGrass'; };
 // footsteps: one place decides what a step sounds like (surface variants are added to A.surface later)
-A.footstep = function (P, sprinting) { var s = P.inWater ? 'splash' : ((A.surface && A.surface(P)) || 'step'); A.play(s, (sprinting ? 1.3 : 1) * (P.crouch ? 0.4 : 1)); };
+A.footstep = function (P, sprinting) { var s = P.inWater || (JO.Atmos && JO.Atmos.inPuddle(P.pos.x, P.pos.z)) ? 'splash' : ((A.surface && A.surface(P)) || 'step'); A.play(s, (sprinting ? 1.3 : 1) * (P.crouch ? 0.4 : 1)); };
 S.xb = function (v) { noise({ dur: 0.07, vol: 0.2 * v, f: 1400, type: 'bandpass' }); tone({ f: 240, f2: 120, dur: 0.09, vol: 0.2 * v, type: 'triangle' }); };
 S.ft = function (v) { noise({ dur: 0.16, vol: 0.3 * v, f: 700, f2: 1600, type: 'bandpass', q: 0.5 }); };
 A.play = function (name, vol) {

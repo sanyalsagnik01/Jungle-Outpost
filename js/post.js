@@ -75,7 +75,7 @@ Po.render = function (scene, cam, real) {
   var sm = W.renderer.shadowMap; if (Po.tier === 'low') { sm.autoUpdate = false; sm.needsUpdate = ((Po.n = (Po.n | 0) + 1) & 1) === 0; } else sm.autoUpdate = true;
   if (Po.tier === 'low' || !composer) { W.renderer.render(scene, cam); return; }
   var u = final.uniforms, g = Po.grade || LOOK[0], Wx = JO.Weather, P = JO.Player, wet = Wx ? Wx.rain * 0.12 + Wx.fog * 0.1 : 0;
-  u.uTint.value.set(g.tint[0], g.tint[1], g.tint[2]); u.uSat.value = g.sat - wet; u.uCon.value = g.con; u.uFlash.value = Wx ? Wx.flash : 0;
+  u.uTint.value.set(g.tint[0], g.tint[1], g.tint[2]); u.uSat.value = (g.sat - wet) * (Po.satK || 1); u.uCon.value = g.con * (Po.conK || 1); if (Po.look) u.uLook.value.copy(Po.look); u.uLift.value = Po.lift || 0; u.uFlash.value = Wx ? Wx.flash : 0;
   u.uVig.value = 0.5 + (JO.Input.ads ? 0.15 : 0) + (P.crouch ? 0.12 : 0) + (Po.vigAdd || 0);
   u.uBlur.value = Po.blurMove || 0;
   // depth of field needs the scene's depth: one extra half-size pass, only while aiming on HIGH

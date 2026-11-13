@@ -117,8 +117,9 @@ JO.Sys.add('lights', {
     // lights that still have their request keep it if it is among the nearest n
     var order = Li.req.slice(0, rn).sort(function (a, b) { return a.score - b.score; }).slice(0, Li.n);
     for (j = 0; j < Li.n; j++) { p = Li.pool[j]; p.want = null; for (i = 0; i < order.length; i++) if (order[i].id === p.id && !order[i].taken) { p.want = order[i]; order[i].taken = true; break; } }
-    for (j = 0; j < Li.n; j++) { p = Li.pool[j]; if (p.want) continue; if (p.cur > 0.03) continue;                       // still fading out from its old job
-      for (i = 0; i < order.length; i++) if (!order[i].taken) { p.want = order[i]; p.id = order[i].id; order[i].taken = true; break; } if (!p.want) p.id = null; }
+    for (j = 0; j < Li.n; j++) { p = Li.pool[j]; if (p.want) continue;
+      for (i = 0; i < order.length; i++) if (!order[i].taken && (p.cur <= 0.03 || order[i].prio >= 3)) { p.want = order[i]; p.id = order[i].id; order[i].taken = true; break; }      // a light fades out of its old job first, unless a flash needs it now
+      if (!p.want && p.cur <= 0.03) p.id = null; }
     Li.used = 0;
     for (j = 0; j < Li.n; j++) { p = Li.pool[j]; r = p.want;
       if (r) { p.light.position.set(r.x, r.y, r.z); p.light.color.setHex(r.hex); p.light.distance = r.range; p.cur += (r.i - p.cur) * k; Li.used++; } else p.cur += (0 - p.cur) * k;
