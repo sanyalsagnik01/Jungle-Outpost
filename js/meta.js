@@ -34,7 +34,8 @@ function rebuildKeys() {
 }
 M.get = function (k) { return set[k]; };
 M.apply = function () {
-  var P = S.profile.settings, k; for (k in DEF) if (P[k] === undefined) P[k] = typeof DEF[k] === 'object' ? {} : DEF[k]; set = M.set = P;
+  var P = S.profile.settings, k, QD = JO.Q.DEF; for (k in DEF) if (P[k] === undefined) P[k] = typeof DEF[k] === 'object' ? {} : DEF[k];
+  for (k in QD) if (P[k] === undefined) P[k] = QD[k]; set = M.set = P;
   document.documentElement.style.setProperty('--sub', set.subSize); document.body.classList.toggle('cb', !!set.colorblind);
   A.volume = set.volume; A.musicVol = set.music; if (A.applyVolume) A.applyVolume();
   JO.FX.shakeK = set.reduceShake ? 0.25 : 1; JO.Game.reduceFlash = !!set.reduceFlash; JO.Radar.on = !!set.minimap; JO.Radar.palette(set.colorblind); JO.Weather.enabled = !!set.weather;
@@ -173,7 +174,7 @@ M.frame = function (real) {
   combat += ((hot > 0 ? Math.min(1, 0.45 + hot * 0.12) : 0) - combat) * Math.min(1, real * (hot ? 2.5 : 0.5)); A.combat = combat;
   A.tense = G.state === 'playing' && JO.Player.hp < JO.Player.maxHp * 0.3;
   if (set && set.fps) { fpsN++; fpsAcc += real; if (real > worst) worst = real; fpsT -= real;
-    if (fpsT <= 0) { fpsT = 0.5; var info = JO.World.renderer.info.render; fpsEl.textContent = Math.round(fpsN / Math.max(0.001, fpsAcc)) + ' FPS · ' + (worst * 1000).toFixed(0) + ' ms worst · ' + info.calls + ' draws · ' + Math.round(info.triangles / 1000) + 'k tris · ' + JO.Post.tier.toUpperCase(); fpsN = 0; fpsAcc = 0; worst = 0; } }
+    if (fpsT <= 0) { fpsT = 0.5; var info = JO.World.renderer.info.render; M.fpsNow = Math.round(fpsN / Math.max(0.001, fpsAcc)); fpsEl.textContent = M.fpsNow + ' FPS · ' + (worst * 1000).toFixed(0) + ' ms worst · ' + (JO.Post.calls || info.calls) + ' draws · ' + Math.round((JO.Post.tris || info.triangles) / 1000) + 'k tris · ' + JO.Post.tier.toUpperCase() + '  (F2)'; fpsN = 0; fpsAcc = 0; worst = 0; } }
 };
 
 M.init = function () {
@@ -185,6 +186,7 @@ M.init = function () {
   $('btnPauseSettings').addEventListener('click', function () { A.play('ui'); M.openSettings('scrPause'); });
   $('btnAch').addEventListener('click', function () { A.init(); A.play('ui'); renderAch(); JO.UI.show('scrAch'); });
   $('btnModes').addEventListener('click', function () { A.init(); A.play('ui'); renderModes(); JO.UI.show('scrModes'); });
+  window.addEventListener('keydown', function (e) { if (e.code === 'F2') { e.preventDefault(); set.fps = !set.fps; save(); } });
   window.addEventListener('keydown', function (e) {
     if (!listening) return; e.preventDefault(); e.stopImmediatePropagation();
     if (e.code !== 'Escape') M.bind(listening.act, e.code); listening = null; renderSettings(); }, true);

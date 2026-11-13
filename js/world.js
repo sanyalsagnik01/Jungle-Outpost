@@ -8,7 +8,7 @@
 'use strict';
 var JO = window.JO;
 var W = JO.World = {
-  colliders: [], cover: [], anim: [], checkpoints: [], crates: [], towers: [], waters: [], owned: [],
+  colliders: [], cover: [], anim: [], checkpoints: [], crates: [], towers: [], waters: [], owned: [], trees: [], bushes: [], torches: [], lamps: [],
   scene: null, camera: null, renderer: null, group: null, arena: null, barriers: null, flag: null,
   A0: 0, A1: 0, AC: 0, zMax: 8, zMin: -300, pathHW: 17, arenaHW: 26, exitHW: 9, time: 0
 };
@@ -136,6 +136,8 @@ Batch.prototype.build = function (group) {
     var geo = (mp ? mp.geometry : G[parts[0]]).clone();
     geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 6, -(chunk + 0.5) * 70), 85);
     var mat = this.kind === 'b' ? new THREE.MeshBasicMaterial(this.matOpts || {}) : new THREE.MeshLambertMaterial(mp && mp.map ? { map: mp.map } : undefined);
+    if (JO.Foliage && this.kind === 'l') { var fk = parts[0], fn = fk.indexOf('m~') === 0 ? fk.split('~')[1] : fk;      // leaves and bushes sway
+      var kind = /^env_tree/.test(fn) || fn === 'ico' || fn === 'cone' ? 'tree' : (fn === 'env_bush' || fn === 'env_vine' || fn === 'ico0' ? 'bush' : ''); if (kind) JO.Foliage.patch(mat, kind); }
     var mesh = new THREE.InstancedMesh(geo, mat, n);
     for (var i = 0; i < n; i++) { var o = i * 10;
       dummy.position.set(a[o], a[o + 1], a[o + 2]); dummy.scale.set(a[o + 3], a[o + 4], a[o + 5]);
@@ -183,7 +185,7 @@ W.unload = function () {
   if (W.group) scene.remove(W.group);
   for (var i = 0; i < W.owned.length; i++) W.owned[i].dispose();
   W.owned.length = 0; W.colliders.length = 0; W.cover.length = 0; W.anim.length = 0; W.checkpoints.length = 0;
-  W.crates.length = 0; W.towers.length = 0; W.waters.length = 0; W.group = null; W.flag = null; W.barriers = null;
+  W.crates.length = 0; W.towers.length = 0; W.waters.length = 0; W.trees.length = 0; W.bushes.length = 0; W.torches.length = 0; W.lamps.length = 0; W.group = null; W.flag = null; W.barriers = null;
 };
 
 /* ============================================================
@@ -244,6 +246,7 @@ W.build = function (L) {
   function tree(x, z, big) {
     var h = (big ? 7 : 5.2) + vr() * 3, leaf = pal.leaf[(vr() * pal.leaf.length) | 0], k = vr(), tr = 0.55 + vr() * 0.35, cr = (big ? 6 : 4.2) + vr() * 2.2;
     var name = k < 0.5 ? 'env_tree_a' : (k < 0.86 ? 'env_tree_b' : 'env_tree_c');
+    W.trees.push({ x: x, z: z, h: h, r: cr, big: !!big });
     if (GL(name)) {
       var s = h / 6.3 * (name === 'env_tree_c' ? 1.15 : 1), wd = s * (big ? 1.2 : 1);
       b.addModel(name, x, 0, z, wd, s, wd, leaf, vr() * 6, 0.85 + vr() * 0.3);
@@ -263,7 +266,7 @@ W.build = function (L) {
       b.add('box', x + Math.cos(va) * vd, h - vl / 2 + 0.3, z + Math.sin(va) * vd, 0.07, vl, 0.07, shade(leaf, 0.7)); }
   }
   function bush(x, z, s) {
-    var leaf = shade(pal.leaf[(vr() * pal.leaf.length) | 0], 0.9 + vr() * 0.25);
+    var leaf = shade(pal.leaf[(vr() * pal.leaf.length) | 0], 0.9 + vr() * 0.25); W.bushes.push({ x: x, z: z, s: s });
     if (GL('env_bush')) b.addModel('env_bush', x, 0, z, s * 0.8, s * 0.86, s * 0.8, leaf, vr() * 6, 1);
     else b.add('ico0', x, s * 0.32, z, s * 1.5, s * 0.8, s * 1.5, leaf, vr() * 6);
   }
@@ -324,6 +327,7 @@ W.build = function (L) {
     b.addModel(name, x, 0, z, sc || 1, sc || 1, sc || 1, 0, ry || 0, 1); if (hx) W.addBox(x, z, hx, hz, h, { cover: true }); reserve(x, z, Math.max(hx || 1, hz || 1) + 1); return true;
   }
   function torch(x, z) {
+    W.torches.push({ x: x, y: 2.9, z: z });
     b.add('cyl', x, 1.15, z, 0.14, 2.3, 0.14, WOODD); b.add('cone', x, 2.3, z, 0.5, 0.4, 0.5, 0x333333, 0, Math.PI);
     bf.add('cone', x, 2.85, z, 0.42, 0.95, 0.42, 0xff8a20); bf.add('cone', x, 2.75, z, 0.24, 0.6, 0.24, 0xffe070);
     bg.add('disc', x, 0.06, z, 3.6, 1, 3.6, 0xb85a18);
@@ -507,6 +511,8 @@ W.build = function (L) {
   b.build(g); bf.build(g); bg.build(g);
   if (bf.mats.length) W.anim.push(function (dt, t) { var f = 0.85 + Math.sin(t * 17) * 0.08 + Math.sin(t * 7.3) * 0.07;
     for (var q = 0; q < bf.mats.length; q++) bf.mats[q].color.setRGB(f, f, f); });
+  W.ground = ground; W.groundMat = gm; W.pal = pal;
+  JO.Events.emit('world_built', L);
 };
 
 W.setBarrier = function (which, open) {

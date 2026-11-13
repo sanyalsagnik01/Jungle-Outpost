@@ -21,7 +21,8 @@ A.init = function () {
   vox = ctx.createGain(); vox.gain.value = 1; vox.connect(master);
   var n = ctx.sampleRate * 2; noiseBuf = ctx.createBuffer(1, n, ctx.sampleRate);
   var d = noiseBuf.getChannelData(0); for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-  startAmbient(); startDrone();
+  A.buses = { master: master, sfx: sfx, music: music, amb: amb, vox: vox }; A.noiseBuf = noiseBuf;
+  startAmbient(); startDrone(); JO.Events.emit('audio_ready');
   nextNote = ctx.currentTime + 0.1;
 };
 
@@ -140,7 +141,7 @@ function startAmbient() {
   var bf = ctx.createBiquadFilter(); bf.type = 'bandpass'; bf.frequency.value = 5400; bf.Q.value = 9;
   var ig = ctx.createGain(); ig.gain.value = 0.035;
   var tr = ctx.createOscillator(); tr.type = 'square'; tr.frequency.value = 17; var tg = ctx.createGain(); tg.gain.value = 0.03;
-  tr.connect(tg); tg.connect(ig.gain); ins.connect(bf); bf.connect(ig); ig.connect(amb); ins.start(0, 0.7); tr.start();
+  tr.connect(tg); tg.connect(ig.gain); ins.connect(bf); bf.connect(ig); ig.connect(amb); ins.start(0, 0.7); tr.start(); A.insect = ig; A.wind = wg;
 }
 A.setAmbient = function (on) { if (ctx) amb.gain.setTargetAtTime(on ? 1 : 0, ctx.currentTime, 0.4); };
 
@@ -186,7 +187,7 @@ A.update = function (dt) {
   }
   // occasional bird / cricket chirp
   chirpT -= dt;
-  if (chirpT <= 0 && !boss) { chirpT = 2.5 + Math.random() * 5; var f = 2200 + Math.random() * 1500;
+  if (chirpT <= 0 && !boss && !A.lifeOwned) { chirpT = 2.5 + Math.random() * 5; var f = 2200 + Math.random() * 1500;
     tone({ f: f, f2: f * 1.3, dur: 0.07, vol: 0.03, type: 'sine', dest: amb }); tone({ f: f * 1.1, f2: f * 1.4, dur: 0.07, vol: 0.03, type: 'sine', delay: 0.11, dest: amb }); }
 };
 })();

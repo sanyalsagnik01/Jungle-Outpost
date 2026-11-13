@@ -214,7 +214,7 @@ function step(dt) {
   if (spawnT <= 0 && !Game.bossFight && !Game.bossDead) { spawnT = 0.15; var n = E.count();
     for (var i = 0; i < pending.length && n < CFG.MAX_ACTIVE; i++) { var s = pending[i]; if (P.pos.z > s.trig) continue;
       E.spawn(s.type, s.x, s.z, s.type === 'sniper' ? { y: 4.88, alt: s.alt } : null); pending.splice(i, 1); i--; n++; } }
-  E.update(dt); H.update(dt); Ar.update(dt); Sl.update(dt); Pr.update(dt); FX.updateBullets(dt); updatePickups(dt); JO.Codex.update(dt);
+  E.update(dt); H.update(dt); Ar.update(dt); Sl.update(dt); Pr.update(dt); FX.updateBullets(dt); updatePickups(dt); JO.Codex.update(dt); JO.Sys.step(dt);
   if (P.dead) { I.endStep(); return; }
 
   for (var c = 0; c < W.checkpoints.length; c++) { var cp = W.checkpoints[c]; if (cp.reached || P.pos.z > cp.z) continue;
@@ -267,9 +267,17 @@ function tick(real) {
   if (Game.state !== 'paused') St.update(real); St.cutUpdate(real);
   A.update(real);
   if (dbgOn) { dbgT -= real; if (dbgT <= 0) { dbgT = 0.2; debugOverlay(real); } }
-  JO.Weather.update(fdt, real); JO.Radar.update(real); JO.Meta.frame(real);
+  JO.Weather.update(fdt, real); JO.Radar.update(real); JO.Meta.frame(real); JO.Sys.frame(fdt, real);
   if (!Game.debug.noRender) JO.Post.render(W.scene, cam, real);
 }
+
+// tests: advance game time synchronously. sec of logic steps, with one visual frame every `every` steps.
+Game.debug.run = function (sec, every) {
+  var n = Math.round(sec / STEP), i; every = every || 1; I.external = true;
+  for (i = 0; i < n && (Game.state === 'playing' || Game.state === 'dying'); i++) { step(STEP);
+    if (i % every === 0) { var fd = STEP * every; Cam.compute(1, fd); Cam.apply(W.camera); P.animate(fd); W.update(fd); FX.update(fd, W.time); JO.Weather.update(fd, fd); JO.Meta.frame(fd); JO.Sys.frame(fd, fd); } }
+  return i;
+};
 
 /* ---------- debug overlay (F3): what is under the crosshair, and what the asset layer loaded ---------- */
 var dbgOn = false, dbgT = 0, dbgEl = null, DH = { t: 0, enemy: null, part: null, missile: null }, fpsAvg = 60;
@@ -301,7 +309,7 @@ Game.toggleDebug = function (on) {
 function bind(id, fn) { document.getElementById(id).addEventListener('click', function (e) { A.init(); A.play('ui'); fn(e); }); }
 Game.init = function () {
   var canvas = document.getElementById('game');
-  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas); St.init(); Pk.init(); Ar.init(W.scene); Sl.init(); Pr.init(); JO.Weather.init(); JO.Radar.init(); JO.Post.init(); JO.Meta.init(); JO.Codex.init(W.scene); JO.Finale.init(W.scene);
+  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas); St.init(); Pk.init(); Ar.init(W.scene); Sl.init(); Pr.init(); JO.Weather.init(); JO.Radar.init(); JO.Post.init(); JO.Meta.init(); JO.Codex.init(W.scene); JO.Finale.init(W.scene); JO.Sys.init();
   FX.pMat.uniforms.uScale.value = window.innerHeight;
   W.build(CFG.LEVELS[0]); P.model.g.visible = false;                       // title backdrop
   // models load behind the title screen; whatever fails simply stays primitive
