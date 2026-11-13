@@ -12,7 +12,7 @@ var $ = function (id) { return document.getElementById(id); };
 // where the collectibles sit in each level: 4 intel logs on or near the trail, 1 idol tucked against the tree line
 var SPOTS = [
   { intel: [[-3, -22], [5, -92], [-7, -150], [4, -205]], idol: [13.5, -118] },
-  { intel: [[3, -34], [-5, -100], [6, -145], [-4, -212]], idol: [-13.5, -182] },
+  { intel: [[3, -34], [0, -99], [6, -145], [-4, -212]], idol: [-13.5, -182] },
   { intel: [[-4, -30], [6, -98], [-7, -162], [5, -218]], idol: [13.5, -140] }];
 var beamMat = null, scene = null;
 

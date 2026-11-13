@@ -14,6 +14,7 @@ var P = JO.Player = {
   pos: new THREE.Vector3(), prev: new THREE.Vector3(), yaw: Math.PI, pitch: 0, kick: 0,
   vx: 0, vy: 0, vz: 0, kx: 0, kz: 0, hp: 100, maxHp: 100, armor: 0, maxPlates: 1, stamina: 100,
   onGround: true, rolling: 0, rollCd: 0, rollX: 0, rollZ: 1, invuln: 0, sinceDmg: 99, stamDelay: 0, dead: false,
+  crouch: false, driving: false,
   up: { hp: 0, fire: 0, reload: 0, plate: 0, mag: 0, stam: 0 }, stepDist: 0, walkPhase: 0, inWater: false, nearCrate: null, model: null
 };
 
@@ -63,7 +64,7 @@ P.resetRun = function () {
 };
 P.place = function (x, z) {
   P.pos.set(x, 0, z); P.prev.copy(P.pos); P.vx = P.vy = P.vz = P.kx = P.kz = 0; P.yaw = Math.PI; P.pitch = -0.05; P.kick = 0;
-  P.rolling = 0; P.rollCd = 0; P.invuln = 0; P.dead = false; P.onGround = true; P.stamina = PC.stamina; P.sinceDmg = 99;
+  P.rolling = 0; P.rollCd = 0; P.invuln = 0; P.dead = false; P.onGround = true; P.crouch = false; P.driving = false; P.stamina = PC.stamina; P.sinceDmg = 99;
   P.model.g.visible = true; P.model.g.rotation.set(0, P.yaw, 0); P.model.g.position.copy(P.pos);
   P.deadT = 0; if (P.gfx) { P.gfx.reset(); P.gfx.play('idle', 1); P.wpnCur = -2; }
 };
@@ -90,6 +91,7 @@ P.damage = function (amt, sx, sz, tag) {
   amt *= Gm.diffCfg.dmg * JO.Perks.taken(); Gm.stats.dmgTaken += amt;
   if (Gm.debug.dmgBy) Gm.debug.dmgBy[tag || 'other'] = (Gm.debug.dmgBy[tag || 'other'] || 0) + Math.round(amt);
   if (Gm.debug.god) return true;
+  if (P.driving) amt = JO.Props.absorb(amt);
   if (P.armor > 0) { var a = Math.min(P.armor, amt); P.armor -= a; amt -= a; A.play('armor'); }
   if (amt > 0) { P.hp -= amt; A.play('hurt'); }
   if (P.hp <= 0 && JO.Perks.has('v4') && !JO.Perks.lastStand) { JO.Perks.lastStand = true; P.hp = 1; P.invuln = 2; JO.UI.banner('LAST STAND', 1.6, true); }
@@ -104,6 +106,12 @@ P.knock = function (x, z) { P.kx += x; P.kz += z; };
 P.update = function (dt) {
   P.prev.copy(P.pos);
   if (P.dead) { if (!P.gfx) P.model.g.rotation.x = Math.max(-1.5, P.model.g.rotation.x - dt * 4); else { P.model.g.rotation.x = 0; P.model.g.scale.setScalar(1); } return; }
+  if (P.driving) {                                              // the jeep moves us; props.js owns the wheel
+    JO.Props.drive(dt); if (P.invuln > 0) P.invuln -= dt; P.sinceDmg += dt;
+    if (P.sinceDmg > PC.regenDelay && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + PC.regenRate * dt);
+    if (P.stamina < PC.stamina) P.stamina = Math.min(PC.stamina, P.stamina + PC.staminaRegen * dt);
+    P.nearCrate = null; P.model.g.position.copy(P.pos); P.model.g.rotation.y = P.yaw; return; }
+  if (I.crouchPressed) { P.crouch = !P.crouch; A.play('swap', 0.6); }
   var mx = I.moveX, my = I.moveY, len = Math.hypot(mx, my);
   if (len > 1) { mx /= len; my /= len; len = 1; }
   var sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
@@ -114,18 +122,18 @@ P.update = function (dt) {
 
   var sprinting = false, speed;
   if (I.rollPressed && P.rollCd <= 0 && P.rolling <= 0 && P.onGround && P.stamina >= PC.rollCost) {
-    P.rolling = PC.rollTime; P.invuln = PC.rollInvuln; P.rollCd = PC.rollCd; P.stamina -= PC.rollCost; P.stamDelay = PC.staminaDelay;
+    P.rolling = PC.rollTime; P.crouch = false; P.invuln = PC.rollInvuln; P.rollCd = PC.rollCd; P.stamina -= PC.rollCost; P.stamDelay = PC.staminaDelay;
     if (len > 0.15) { var l = Math.hypot(wx, wz); P.rollX = wx / l; P.rollZ = wz / l; } else { P.rollX = sy; P.rollZ = cy; }
     A.play('roll');
   }
   if (P.rolling > 0) {
     P.rolling -= dt; speed = PC.rollSpeed * (P.rolling > 0.12 ? 1 : 0.55); P.vx = P.rollX * speed; P.vz = P.rollZ * speed;
   } else {
-    sprinting = I.sprint && my > 0.2 && P.stamina > 1 && !I.ads;
-    speed = I.ads ? PC.adsMove : (sprinting ? PC.sprint : PC.walk);
+    sprinting = I.sprint && my > 0.2 && P.stamina > 1 && !I.ads; if (sprinting || !P.onGround) P.crouch = false;
+    speed = P.crouch ? PC.crouch : (I.ads ? PC.adsMove : (sprinting ? PC.sprint : PC.walk));
     if (P.inWater) speed *= 0.6;
     P.vx = wx * speed; P.vz = wz * speed;
-    if (I.jumpPressed && P.onGround) { P.vy = PC.jump; P.onGround = false; A.play('jump'); }
+    if (I.jumpPressed && P.onGround) { P.vy = PC.jump; P.onGround = false; P.crouch = false; A.play('jump'); }
   }
   if (sprinting) { P.stamina = Math.max(0, P.stamina - PC.sprintDrain * dt); P.stamDelay = PC.staminaDelay; }
   else if (P.stamDelay > 0) P.stamDelay -= dt;
@@ -139,7 +147,8 @@ P.update = function (dt) {
 
   var moved = Math.hypot(P.pos.x - P.prev.x, P.pos.z - P.prev.z);
   if (P.onGround && P.rolling <= 0) { P.stepDist += moved; P.walkPhase += moved * 2.3;
-    if (P.stepDist > (sprinting ? 2.6 : 2.1)) { P.stepDist = 0; A.play(P.inWater ? 'splash' : 'step', sprinting ? 1.3 : 1);
+    if (P.stepDist > (sprinting ? 2.6 : 2.1)) { P.stepDist = 0; JO.Audio.footstep(P, sprinting);
+      JO.Events.emit('noise', P.pos.x, P.pos.z, (P.crouch ? 2 : (sprinting ? 14 : 7.5)) * (P.inWater ? 1.4 : 1) * (JO.Perks.has('s1') ? 0.65 : 1), 'step');
       if (P.inWater) FX.burst(P.pos.x, 0.15, P.pos.z, 4, 0xcfeeee, 2, 0.35, 8, 0.1, 1.5); } }
 
   P.sinceDmg += dt;
@@ -156,20 +165,21 @@ P.update = function (dt) {
   var m = P.model, g = m.g;
   g.position.copy(P.pos); g.rotation.y = P.yaw;
   if (P.rolling > 0) { var rp = 1 - P.rolling / PC.rollTime; g.rotation.x = rp * Math.PI * 2; g.position.y += 0.55 * Math.sin(rp * Math.PI); g.scale.setScalar(0.82); }
-  else { g.rotation.x = 0; g.scale.setScalar(1); M.walk(m, P.walkPhase, moved > 0.01 && P.onGround ? 1 : 0, false); }
+  else { g.rotation.x = 0; g.scale.setScalar(1); if (P.crouch) g.scale.y = 0.72; M.walk(m, P.walkPhase, moved > 0.01 && P.onGround ? 1 : 0, false); }
 };
 
 /* ============================================================
    CAMERA (over the shoulder, collision aware)
    ============================================================ */
-var Cam = JO.Cam = { x: 0, y: 2, z: 5, fx: 0, fy: 0, fz: -1, rx: 1, rz: 0, ux: 0, uy: 1, uz: 0, dist: 3.8, fov: 65, adsK: 0 };
+var Cam = JO.Cam = { x: 0, y: 2, z: 5, fx: 0, fy: 0, fz: -1, rx: 1, rz: 0, ux: 0, uy: 1, uz: 0, dist: 3.8, fov: 65, adsK: 0, eye: 1.58 };
 Cam.compute = function (alpha, frameDt) {
   var px = P.prev.x + (P.pos.x - P.prev.x) * alpha, py = P.prev.y + (P.pos.y - P.prev.y) * alpha, pz = P.prev.z + (P.pos.z - P.prev.z) * alpha;
   if (frameDt) { var tk = (I.ads && !P.dead) ? 1 : 0; Cam.adsK += (tk - Cam.adsK) * Math.min(1, frameDt * 12); }
   var k = Cam.adsK, pitch = P.pitch + P.kick, cp = Math.cos(pitch), sp = Math.sin(pitch), sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
   var fx = sy * cp, fy = sp, fz = cy * cp, rx = -cy, rz = sy;
-  var want = 4.7 - 2.2 * k, sh = 0.95 + 0.05 * k;
-  var vx = px + rx * sh, vy = py + 1.58, vz = pz + rz * sh;                    // pivot
+  var want = (P.driving ? 7.8 : 4.7) - 2.2 * k, sh = 0.95 + 0.05 * k;
+  Cam.eye += ((P.driving ? 2.5 : (P.crouch ? 1.2 : 1.58)) - Cam.eye) * (frameDt ? Math.min(1, frameDt * 10) : 0);
+  var vx = px + rx * sh, vy = py + Cam.eye, vz = pz + rz * sh;                    // pivot
   var ox = -fx * want, oy = -fy * want + 0.28, oz = -fz * want, len = Math.sqrt(ox * ox + oy * oy + oz * oz);
   ox /= len; oy /= len; oz /= len;
   var t = W.raycast(vx, vy, vz, ox, oy, oz, len + 0.35); if (t < len + 0.35) len = Math.max(0.45, t - 0.35);
@@ -279,7 +289,7 @@ function shoot(s) {
     E.hitscan(ox, oy, oz, dx, dy, dz, c.range, HIT);
     var ex = ox + dx * HIT.t, ey = oy + dy * HIT.t, ez = oz + dz * HIT.t;
     FX.tracer(mx, my, mz, ex, ey, ez, bolt ? 0x9adfff : (c.id === 'mr' ? 0xffffff : 0xffe9a0), c.id === 'mr' || bolt ? 0.06 : 0.035, bolt ? 0.3 : (c.id === 'mr' ? 0.16 : 0.08));
-    if (JO.Stealth) JO.Stealth.shot(ox, oy, oz, dx, dy, dz, HIT.t, c);
+    JO.Props.shot(ox, oy, oz, dx, dy, dz, HIT.t, c);
     if (bolt && Pk.mod('xb_boom') && HIT.t < c.range) JO.Arsenal.blast(ex, Math.max(0.3, ey), ez, 3, 60, 0.3);
     if (HIT.enemy) {
       var dmg = c.dmg * Pk.damage(c, HIT.enemy);

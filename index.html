@@ -151,6 +151,17 @@ body.paused #dlg,body.paused #bark{visibility:hidden}
 #tJump{right:124px;bottom:40px}#tRoll{right:126px;bottom:124px}#tReload{right:34px;bottom:196px}
 #tAds{right:204px;bottom:70px}#tSwap{right:120px;bottom:206px}#tUse{right:210px;bottom:160px}
 #tNade{right:34px;bottom:270px;width:52px;height:52px;font-size:11px}#tSmoke{right:96px;bottom:280px;width:52px;height:52px;font-size:11px}#tBench{right:210px;bottom:230px}
+#tCrouch{right:204px;bottom:300px;width:52px;height:52px;font-size:11px}
+#stealth{position:absolute;left:50%;top:58px;transform:translateX(-50%);width:200px;text-align:center;font-size:10px;letter-spacing:3px;color:var(--bone)}
+#stealthBar{height:5px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);margin-bottom:3px}
+#stealthFill{display:block;height:100%;background:var(--cyan);transform:scaleX(0);transform-origin:left center}
+#stealth.warm #stealthFill{background:var(--amber)}#stealth.warm{color:var(--amber)}#stealth.hot #stealthFill{background:var(--red)}#stealth.hot{color:var(--red)}
+#hack{position:fixed;left:50%;top:26%;transform:translateX(-50%);z-index:46;padding:14px 22px;text-align:center;background:rgba(6,12,14,.92);border:1px solid var(--cyan);border-left:3px solid var(--cyan);font-family:var(--mono);color:var(--bone)}
+#hack b{display:block;font-family:var(--head);font-weight:normal;letter-spacing:4px;color:var(--cyan);font-size:18px}
+#hackSeq{font-size:40px;letter-spacing:10px;margin:8px 0}#hackSeq span{opacity:.35}#hackSeq span.ok{opacity:1;color:#5cff7a}#hackSeq span.cur{opacity:1;color:var(--amber)}
+#hackBar{height:6px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2)}#hackFill{display:block;height:100%;background:var(--cyan);transform-origin:left center}
+#hack small{display:block;margin-top:8px;font-size:11px;opacity:.8}#hackPad{display:none;gap:8px;justify-content:center;margin-top:10px}body.touch #hackPad{display:flex}
+#hackPad button{pointer-events:auto;width:54px;height:54px;font-size:24px;background:rgba(20,34,36,.9);color:var(--bone);border:1px solid var(--cyan)}
 #hudNades{margin-top:5px;font-size:11px;letter-spacing:1px;opacity:.85}#hudSalvage{font-size:12px;margin-top:3px;color:var(--amber)}
 #benchSalvage{font-family:var(--head);font-size:26px;letter-spacing:4px;color:var(--amber);margin:-6px 0 4px}
 #benchBody{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:min(1100px,96vw);max-height:56vh;overflow:auto;padding:2px}
@@ -226,6 +237,7 @@ body.touch #prompt{top:40%}
   <div id="hudBR" class="panel"><div id="wName"></div><div id="wAmmo"></div>
     <div id="slots"><span id="s1">1 AR</span><span id="s2">2 SG</span><span id="s3">3 MR</span><span id="s4">4 XB</span><span id="s5">5 FT</span></div>
     <div id="hudNades"></div></div>
+  <div id="stealth" class="hidden"><div id="stealthBar"><i id="stealthFill"></i></div><span id="stealthTxt"></span></div>
   <div id="banner"></div>
   <div id="reloadTxt" class="hidden">RELOADING</div>
   <div id="prompt" class="hidden"></div>
@@ -248,6 +260,7 @@ body.touch #prompt{top:40%}
   <div id="tNade" class="tbtn" data-act="nade">FRAG</div>
   <div id="tSmoke" class="tbtn" data-act="smoke">SMOKE</div>
   <div id="tBench" class="tbtn hidden" data-act="bench">BENCH</div>
+  <div id="tCrouch" class="tbtn" data-act="crouch">DUCK</div>
 </div>
 
 <div id="dlg" class="hidden"><div id="dlgPic"></div><div><div id="dlgName"></div><div id="dlgText"></div></div><small>ENTER</small></div>
@@ -259,6 +272,9 @@ body.touch #prompt{top:40%}
   <div id="cutBar"><span id="cutN"></span><button class="btn" id="cutNext">NEXT</button><button class="btn ghost" id="cutSkip">SKIP</button></div>
 </div>
 
+<div id="hack" class="hidden"><b>BYPASSING GATE LOCK</b><div id="hackSeq"></div><div id="hackBar"><i id="hackFill"></i></div>
+  <small>Enter the sequence with W A S D or the arrow keys. A wrong key starts it over.</small>
+  <div id="hackPad"><button data-dir="left">&larr;</button><button data-dir="up">&uarr;</button><button data-dir="down">&darr;</button><button data-dir="right">&rarr;</button></div></div>
 <div id="toasts"></div>
 <pre id="dbg" class="hidden"></pre>
 
@@ -290,7 +306,9 @@ body.touch #prompt{top:40%}
     <tr><td>Shift</td><td>Sprint (uses stamina)</td></tr><tr><td>Space</td><td>Jump (clears shockwaves)</td></tr>
     <tr><td>C or Ctrl</td><td>Roll / dodge &mdash; brief invulnerability</td></tr><tr><td>R</td><td>Reload</td></tr>
     <tr><td>1 / 2 / 3</td><td>Assault rifle / Shotgun / Marksman rifle</td></tr><tr><td>4 / 5</td><td>Crossbow (silent) / Flamethrower</td></tr>
-    <tr><td>G / Q</td><td>Throw frag grenade / smoke grenade</td></tr><tr><td>B</td><td>Field bench at a reached checkpoint (skills, weapon mods)</td></tr><tr><td>E</td><td>Open supply crates</td></tr>
+    <tr><td>G / Q</td><td>Throw frag grenade / smoke grenade</td></tr><tr><td>B</td><td>Field bench at a reached checkpoint (skills, weapon mods)</td></tr>
+    <tr><td>X</td><td>Crouch: quieter, harder to see</td></tr><tr><td>F</td><td>Silent takedown from behind an unaware enemy</td></tr>
+    <tr><td>E</td><td>Also: hack terminals, pull levers, drive the jeep</td></tr><tr><td>E</td><td>Open supply crates</td></tr>
     <tr><td>Esc</td><td>Pause</td></tr><tr><td>M</td><td>Mute</td></tr>
   </table>
   <div class="note" style="margin:0 0 14px">Tip: prefer <b>C</b> for rolling &mdash; browsers reserve Ctrl+W to close the tab.<br>
@@ -310,7 +328,7 @@ body.touch #prompt{top:40%}
   <button class="btn ghost" id="btnPauseCodex">CODEX</button>
   <button class="btn ghost" id="btnPauseRestart">RESTART LEVEL</button>
   <button class="btn ghost" id="btnPauseQuit">QUIT TO TITLE</button>
-  <div class="note">WASD move &middot; Shift sprint &middot; Space jump &middot; C roll &middot; LMB shoot &middot; RMB aim &middot; R reload &middot; 1-5 weapons &middot; G frag &middot; Q smoke &middot; E interact &middot; B bench &middot; M mute</div>
+  <div class="note">WASD move &middot; Shift sprint &middot; Space jump &middot; C roll &middot; LMB shoot &middot; RMB aim &middot; R reload &middot; 1-5 weapons &middot; G frag &middot; Q smoke &middot; X crouch &middot; F takedown &middot; E interact &middot; B bench &middot; M mute</div>
 </div>
 
 <div id="scrDead" class="screen hidden">
@@ -382,6 +400,8 @@ body.touch #prompt{top:40%}
 <script src="js/story.js"></script>
 <script src="js/perks.js"></script>
 <script src="js/arsenal.js"></script>
+<script src="js/stealth.js"></script>
+<script src="js/props.js"></script>
 <script src="js/codex.js"></script>
 <script src="js/finale.js"></script>
 <script src="js/main.js"></script>

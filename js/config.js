@@ -20,7 +20,7 @@ JO.CFG = {
 
   PLAYER: {
     hp: 100, regenDelay: 5, regenRate: 6,
-    walk: 5.6, sprint: 9.2, adsMove: 3.4, jump: 7.6, gravity: 21,
+    walk: 5.6, sprint: 9.2, adsMove: 3.4, crouch: 3.0, jump: 7.6, gravity: 21,
     rollSpeed: 12.5, rollTime: 0.45, rollInvuln: 0.42, rollCd: 1.2, rollCost: 22,
     stamina: 100, sprintDrain: 15, staminaRegen: 24, staminaDelay: 0.7,
     radius: 0.45, plateValue: 50, checkpointHeal: 40, checkpointAmmo: 150
@@ -156,7 +156,9 @@ JO.CFG = {
         ] }
       ],
       crates: [[5, -30], [-6, -100], [6, -172], [-5, -238]],
-      pickups: [['ammo', -4, -84], ['health', 4, -164], ['ammo', 3, -236], ['armor', -9, -146]]
+      pickups: [['ammo', -4, -84], ['health', 4, -164], ['ammo', 3, -236], ['armor', -9, -146]],
+      // breakables and set pieces (see props.js)
+      props: { barrels: [[-4, -48], [6, -62], [2, -116], [-6, -194], [7, -214]], crates: [[3, -36], [-5, -70], [5, -132], [-3, -184], [4, -222]], logs: [[2, -141], [-6, -200]] }
     },
     {
       sub: 'LEVEL 2', name: 'DROWNED RUINS', seed: 23, len: 240, boss: 'phantom', barrier: 'fog',
@@ -175,7 +177,7 @@ JO.CFG = {
           ['runner', 13, -58, { trig: -30 }], ['runner', -13, -61, { trig: -30 }], ['runner', 12, -64, { trig: -30 }]
         ] },
         { z0: -92, z1: -160, cover: 8, spawns: [
-          ['rifleman', -7, -98], ['rifleman', 7, -134],
+          ['rifleman', -7, -91], ['rifleman', 7, -134],
           ['drone', -6, -112, { trig: -84 }], ['drone', 6, -116, { trig: -84 }], ['drone', 0, -150],
           ['sniper', 11, -132, { alt: [-11, -140] }],
           ['grenadier', -8, -138], ['grenadier', 5, -154]
@@ -190,7 +192,10 @@ JO.CFG = {
         ] }
       ],
       crates: [[-5, -26], [6, -90], [-6, -170], [5, -238]],
-      pickups: [['ammo', 4, -84], ['health', -4, -128], ['ammo', -3, -166], ['armor', 9, -204], ['health', 3, -240]]
+      pickups: [['ammo', 4, -84], ['health', -4, -128], ['ammo', -3, -166], ['armor', 9, -204], ['health', 3, -240]],
+      // the Ruins: a timed spike corridor, a three-lever door and a jeep behind it
+      props: { barrels: [[-6, -44], [7, -68], [6, -138], [-8, -206], [8, -222]], crates: [[4, -30], [-4, -62], [-6, -132], [5, -214]], logs: [[-8, -144]],
+        spikes: { z0: -94, z1: -104 }, door: { z: -172, levers: [[-16, -169.4], [-13, -169.4], [-10, -169.4]] }, jeep: [5.5, -179] }
     },
     {
       sub: 'LEVEL 3', name: 'THE OUTPOST', seed: 37, len: 240, boss: 'commander', barrier: 'gate',
@@ -227,7 +232,10 @@ JO.CFG = {
         ] }
       ],
       crates: [[5, -24], [-6, -88], [6, -168], [-5, -238], [5, -240]],
-      pickups: [['ammo', -4, -84], ['health', 4, -90], ['armor', -9, -120], ['ammo', 8, -128], ['ammo', 3, -166], ['health', -3, -172], ['ammo', -8, -204], ['armor', 8, -236]]
+      pickups: [['ammo', -4, -84], ['health', 4, -90], ['armor', -9, -120], ['ammo', 8, -128], ['ammo', 3, -166], ['health', -3, -172], ['ammo', -8, -204], ['armor', 8, -236]],
+      // the Outpost: a hackable gate and a gantry held up by ropes
+      props: { barrels: [[-5, -46], [6, -64], [-6, -108], [-6.5, -141], [6.5, -141], [4, -200], [-7, -218]], crates: [[4, -34], [-4, -72], [5, -126], [-4, -190]], logs: [[0, -196]],
+        gate: { z: -92, term: [6.4, -90] }, gantry: { z: -142 } }
     }
   ]
 };

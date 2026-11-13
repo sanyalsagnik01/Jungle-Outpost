@@ -38,7 +38,7 @@ H.reset = function () {
 
 // radial blast against the player; solid cover between blast and player soaks most of it
 H.explode = function (x, y, z, radius, dmg) {
-  FX.explosion(x, y, z, radius);
+  FX.explosion(x, y, z, radius); JO.Events.emit('blast', x, z, radius, dmg, 'enemy');
   var P = JO.Player, px = P.pos.x - x, py = P.pos.y + 0.9 - y, pz = P.pos.z - z, d = Math.sqrt(px * px + py * py + pz * pz);
   if (d >= radius || dmg <= 0) return;
   var amt = dmg * (1 - 0.6 * d / radius);

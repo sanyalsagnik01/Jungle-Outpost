@@ -111,7 +111,7 @@ EP.spawn = function (x, z, o) {
   this.dist = 99; this.ndx = 0; this.ndz = 1; this.walk = 0; this.moving = false; this.avoidT = 0; this.avoidSide = 1; this.stuckT = 0; this.flash = 0; this.tint = 0;
   this.retreated = false; this.noSeeT = 0; this.deadT = 0; this.vy = 0; this.patDir = Math.random() < 0.5 ? -1 : 1; this.shieldOpen = false;
   this.ang = Math.random() * 6.28; this.ph = Math.random() * 6.28; this.orbitDir = Math.random() < 0.5 ? -1 : 1; this.atk = 0; this.hitDone = false; this.blindT = 0;
-  this.alt = o.alt || null; this.perchY = o.y || 0; this.tx = x; this.tz = z; this.summoned = !!o.summoned; this.burnT = 0; this.burnTick = 0;
+  this.alt = o.alt || null; this.perchY = o.y || 0; this.tx = x; this.tz = z; this.summoned = !!o.summoned; this.burnT = 0; this.burnTick = 0; this.aware = 0; this.shoutT = 0; this.ramT = 0; this.spikeT = 0;
   if (this.type === 'drone') this.pos.y = 4;
   for (var i = 0; i < this.mats.length; i++) { var m = this.mats[i]; m.transparent = false; m.opacity = 1; m.emissive.setHex(0); m.needsUpdate = true; }
   this.emis = 0; this.mesh.visible = true; this.mesh.rotation.set(0, this.yaw, 0); this.mesh.position.copy(this.pos); this.mesh.scale.setScalar(1);
@@ -122,7 +122,7 @@ EP.spawn = function (x, z, o) {
 EP.setAlert = function () {
   if (this.state !== 'patrol') return;
   this.state = 'alert'; this.stateT = 0.35 + Math.random() * 0.3; this.alerted = true;
-  A.playAt('alert', this.pos.x, this.pos.z); E.alertNear(this.pos.x, this.pos.z, 16); JO.Events.emit('enemy_alert', this);
+  A.playAt('alert', this.pos.x, this.pos.z); JO.Stealth.onAlert(this); JO.Events.emit('enemy_alert', this);
 };
 EP.takeHit = function (dmg, part, dx, dz, hy, headMult) {
   R.dealt = 0; R.blocked = false; R.head = false; R.crit = false; R.killed = false; R.silent = false;
@@ -176,7 +176,7 @@ EP.update = function (dt) {
   if (this.see) this.seenT = 0; else this.seenT += dt;
   this.moving = false; this.tint = this.burnT > 0 ? 0x802000 : 0;
   if (P.dead) { this.hideLaser(); }
-  else if (this.state === 'patrol') { patrol(this, dt); if (this.alerted || (this.see && this.dist < this.cfg.sight * E.sightK) || this.dist < 6.5 * E.sightK) this.setAlert(); }
+  else if (this.state === 'patrol') { patrol(this, dt); if (this.alerted || JO.Stealth.detect(this, dt)) this.setAlert(); }
   else if (this.state === 'alert') { facePlayer(this, dt, 7); this.stateT -= dt;
     if (this.stateT <= 0) { this.state = 'attack'; this.sub = ''; if (this.type === 'rifleman') { pickCover(this, false, false); this.sub = 'move'; this.stateT = 4; }
       if (this.type === 'sniper') { this.sub = 'cool'; this.cd = 0.5 + Math.random(); } } }

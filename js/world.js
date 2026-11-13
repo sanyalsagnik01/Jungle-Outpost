@@ -345,6 +345,7 @@ W.build = function (L) {
     W.crates.push({ x: c[0], z: c[1], opened: false, lid: lid, openT: 0 });
   });
   (L.pickups || []).forEach(function (p) { reserve(p[1], p[2], 1.6); });
+  if (JO.Props) JO.Props.reserve(L, reserve);                  // gates, doors, barrels... keep random cover off them
 
   function makeFlag(x, z, color, big) {
     var grp = new THREE.Group(); grp.position.set(x, 0, z); var h = big ? 6 : 4.2;

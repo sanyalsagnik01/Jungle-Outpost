@@ -93,6 +93,8 @@ var S = {
 
 // later modules add their own sounds here
 A.sounds = S; A.tone = function (o) { if (ctx) tone(o); }; A.noise = function (o) { if (ctx) noise(o); };
+// footsteps: one place decides what a step sounds like (surface variants are added to A.surface later)
+A.footstep = function (P, sprinting) { var s = P.inWater ? 'splash' : ((A.surface && A.surface(P)) || 'step'); A.play(s, (sprinting ? 1.3 : 1) * (P.crouch ? 0.4 : 1)); };
 S.xb = function (v) { noise({ dur: 0.07, vol: 0.2 * v, f: 1400, type: 'bandpass' }); tone({ f: 240, f2: 120, dur: 0.09, vol: 0.2 * v, type: 'triangle' }); };
 S.ft = function (v) { noise({ dur: 0.16, vol: 0.3 * v, f: 700, f2: 1600, type: 'bandpass', q: 0.5 }); };
 A.play = function (name, vol) {

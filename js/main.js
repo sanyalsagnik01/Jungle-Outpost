@@ -8,7 +8,7 @@
 (function () {
 'use strict';
 var JO = window.JO, CFG = JO.CFG, W = JO.World, FX = JO.FX, A = JO.Audio, I = JO.Input, P = JO.Player, Wp = JO.Weapons, Cam = JO.Cam,
-  E = JO.Enemies, H = JO.Haz, B = JO.Bosses, UI = JO.UI, G = W.G, Ev = JO.Events, St = JO.Story, S = JO.Save, Ar = JO.Arsenal, Pk = JO.Perks;
+  E = JO.Enemies, H = JO.Haz, B = JO.Bosses, UI = JO.UI, G = W.G, Ev = JO.Events, St = JO.Story, S = JO.Save, Ar = JO.Arsenal, Pk = JO.Perks, Sl = JO.Stealth, Pr = JO.Props;
 var STEP = CFG.STEP;
 function newStats() { return { time: 0, kills: 0, shots: 0, hits: 0, dmgTaken: 0 }; }
 
@@ -192,6 +192,7 @@ function step(dt) {
     UI.showDead(Game.bossFight ? Game.boss.name + ' still stands. You will restart at the arena gate.' : 'The jungle keeps what it takes. Your last checkpoint is waiting.'); return; } }
   Game.hint = '';
   if (Game.debug.bot) bot(dt);
+  if (Pr.hack) { I.moveX = I.moveY = 0; I.fire = false; I.sprint = false; I.jumpPressed = I.rollPressed = false; }      // hands are on the terminal
   if (St.cine) { I.moveX = I.moveY = 0; I.fire = I.ads = I.sprint = false; I.jumpPressed = I.rollPressed = false; P.invuln = Math.max(P.invuln, 0.3); if (Game.boss && Game.boss.state === 'intro') Game.boss.stateT = Math.max(Game.boss.stateT, St.cine.t); }
   Cam.compute(1, 0);
   P.update(dt); Wp.update(dt);
@@ -201,7 +202,7 @@ function step(dt) {
   if (spawnT <= 0 && !Game.bossFight && !Game.bossDead) { spawnT = 0.15; var n = E.count();
     for (var i = 0; i < pending.length && n < CFG.MAX_ACTIVE; i++) { var s = pending[i]; if (P.pos.z > s.trig) continue;
       E.spawn(s.type, s.x, s.z, s.type === 'sniper' ? { y: 4.88, alt: s.alt } : null); pending.splice(i, 1); i--; n++; } }
-  E.update(dt); H.update(dt); Ar.update(dt); FX.updateBullets(dt); updatePickups(dt); JO.Codex.update(dt);
+  E.update(dt); H.update(dt); Ar.update(dt); Sl.update(dt); Pr.update(dt); FX.updateBullets(dt); updatePickups(dt); JO.Codex.update(dt);
   if (P.dead) { I.endStep(); return; }
 
   for (var c = 0; c < W.checkpoints.length; c++) { var cp = W.checkpoints[c]; if (cp.reached || P.pos.z > cp.z) continue;
@@ -246,7 +247,7 @@ function tick(real) {
     if (cam.fov !== 65) { cam.fov = 65; cam.updateProjectionMatrix(); }
     W.update(real); W.updateSun(0, z - 10);
   } else {
-    Cam.compute(alpha, real); if (!St.cineCamera(cam, real * Math.max(1, Game.debug.speed || 1))) Cam.apply(cam); P.animate(fdt); P.model.g.visible = Cam.dist > 1.25; W.update(fdt); FX.update(fdt, W.time); W.updateSun(P.pos.x, P.pos.z);
+    Cam.compute(alpha, real); if (!St.cineCamera(cam, real * Math.max(1, Game.debug.speed || 1))) Cam.apply(cam); P.animate(fdt); P.model.g.visible = Cam.dist > 1.25 && !P.driving; Sl.hud(); W.update(fdt); FX.update(fdt, W.time); W.updateSun(P.pos.x, P.pos.z);
     UI.update(real, cam);
   }
   if (Game.state !== 'paused') St.update(real); St.cutUpdate(real);
@@ -285,7 +286,7 @@ Game.toggleDebug = function (on) {
 function bind(id, fn) { document.getElementById(id).addEventListener('click', function (e) { A.init(); A.play('ui'); fn(e); }); }
 Game.init = function () {
   var canvas = document.getElementById('game');
-  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas); St.init(); Pk.init(); Ar.init(W.scene); JO.Codex.init(W.scene); JO.Finale.init(W.scene);
+  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas); St.init(); Pk.init(); Ar.init(W.scene); Sl.init(); Pr.init(); JO.Codex.init(W.scene); JO.Finale.init(W.scene);
   FX.pMat.uniforms.uScale.value = window.innerHeight;
   W.build(CFG.LEVELS[0]); P.model.g.visible = false;                       // title backdrop
   // models load behind the title screen; whatever fails simply stays primitive
@@ -360,8 +361,10 @@ function bot(dt) {
     if (rollT <= 0 && P.stamina > 45) { rollT = (sk < 0.7 ? 5 : 2.4) + Math.random(); I.rollPressed = true; }
     botNade -= dt; if (botNade <= 0 && d > 9 && d < 24 && !best.isBoss && best.type !== 'drone' && best.type !== 'sniper' && E.count() >= 2) { botNade = 7; if (Ar.count.frag > 0) I.nadePressed = true; else if (Ar.count.smoke > 0) I.smokePressed = true; }
   } else {
-    if (Game.bossDead) { gx = W.flag.x; gz = W.flag.z; } else if (Game.bossFight && Game.boss.state === 'beaten') { gx = Game.boss.pos.x; gz = Game.boss.pos.z; if (Game.debug.finish) I.meleePressed = true; else if (Game.boss.dist < 6) I.interactPressed = true; } else if (Game.bossFight) { gx = Math.sin(botT) * 12; gz = W.AC + Math.cos(botT) * 12; } else { gx = 0; gz = P.pos.z - 12; }
+    if (Game.bossDead) { gx = W.flag.x; gz = W.flag.z; } else if (Game.bossFight && Game.boss.state === 'beaten') { gx = Game.boss.pos.x; gz = Game.boss.pos.z; if (Game.debug.finish) I.meleePressed = true; else if (Game.boss.dist < 6) I.interactPressed = true; } else if (Game.bossFight) { gx = Math.sin(botT) * 12; gz = W.AC + Math.cos(botT) * 12; }
+    else { var pg = Pr.botGoal(), hold = false; if (pg) { gx = pg.x; gz = pg.z; if (pg.use) I.interactPressed = true; hold = !!pg.stop || (pg.use && Math.hypot(gx - P.pos.x, gz - P.pos.z) < 0.5); } else { gx = 0; gz = P.pos.z - 12; } }
     P.pitch = -0.05; P.yaw = Math.atan2(gx - P.pos.x, gz - P.pos.z); I.moveY = 1; I.sprint = true;
+    if (hold) { I.moveY = 0; I.sprint = false; stuckT = 0; }
     if (sideT > 0) { sideT -= dt; I.moveX = sideDir; }
   }
   stuckT += dt;
