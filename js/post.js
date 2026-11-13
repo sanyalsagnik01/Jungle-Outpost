@@ -56,8 +56,9 @@ Po.apply = function (tier) {
 };
 // 'auto' | 'low' | 'med' | 'high'
 Po.set = function (s, quiet) {
-  Po.setting = s; JO.Save.profile.settings.quality = s; JO.Save.save(); slowT = fastT = 0; warm = 0;
-  Po.apply(s === 'auto' ? 'high' : s); if (!quiet && JO.UI) JO.UI.toast('GRAPHICS', (s === 'auto' ? 'AUTO (' + Po.tier.toUpperCase() + ')' : Po.tier.toUpperCase()) + (Po.ok || Po.tier === 'low' ? '' : ' — effects unavailable'), '#58e0d0');
+  var before = Po.tier; Po.setting = s; JO.Save.profile.settings.quality = s; JO.Save.save(); slowT = fastT = 0; warm = 0;
+  Po.apply(s === 'auto' ? 'high' : s); if (!quiet && JO.UI && before !== Po.tier && TIERS.indexOf(Po.tier) < TIERS.indexOf(before)) JO.UI.toast('QUALITY ' + Po.tier.toUpperCase(), JO.Q.lost(before, Po.tier), '#58e0d0');
+  if (!quiet && JO.UI) JO.UI.toast('GRAPHICS', (s === 'auto' ? 'AUTO (' + Po.tier.toUpperCase() + ')' : Po.tier.toUpperCase()) + (Po.ok || Po.tier === 'low' ? '' : ' — effects unavailable'), '#58e0d0');
 };
 Po.cycle = function () { var o = ['auto', 'high', 'med', 'low']; Po.set(o[(o.indexOf(Po.setting) + 1) % o.length]); };
 Po.init = function () {
@@ -69,7 +70,7 @@ Po.render = function (scene, cam, real) {
   // frame-rate watch: only while actually playing, and only in AUTO
   Po.fps += (1 / Math.max(0.001, real) - Po.fps) * 0.05;
   if (Po.setting === 'auto' && JO.Game.state === 'playing' && !JO.Game.debug.bot) { warm += real;
-    if (warm > 4) { var i = TIERS.indexOf(Po.tier); if (Po.fps < 27 && i > 0) { slowT += real; if (slowT > 3) { slowT = 0; warm = 0; Po.apply(TIERS[i - 1]); JO.UI.toast('GRAPHICS', 'Frame rate low — switched to ' + Po.tier.toUpperCase() + ' (F4 changes it)', '#58e0d0'); } } else slowT = 0; } }
+    if (warm > 4) { var i = TIERS.indexOf(Po.tier); if (Po.fps < 27 && i > 0) { slowT += real; if (slowT > 3) { slowT = 0; warm = 0; var from = Po.tier; Po.apply(TIERS[i - 1]); Po.fellBack = (Po.fellBack | 0) + 1; JO.UI.toast('GRAPHICS', 'Frame rate low — switched to ' + Po.tier.toUpperCase() + ' (F4 changes it)', '#58e0d0'); JO.UI.toast('QUALITY ' + Po.tier.toUpperCase(), JO.Q.lost(from, Po.tier), '#58e0d0'); } } else slowT = 0; } }
   // LOW also refreshes shadows only every other frame
   var info = W.renderer.info; info.autoReset = false; Po.calls = info.render.calls; Po.tris = info.render.triangles; info.reset();      // totals of the frame just drawn (all passes)
   var sm = W.renderer.shadowMap; if (Po.tier === 'low') { sm.autoUpdate = false; sm.needsUpdate = ((Po.n = (Po.n | 0) + 1) & 1) === 0; } else sm.autoUpdate = true;

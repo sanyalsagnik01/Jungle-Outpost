@@ -56,6 +56,12 @@ var Q = JO.Q = {
 Q.tier = function () { return (JO.Post && JO.Post.tier) || 'low'; };
 Q.idx = function () { return TIER[Q.tier()] || 0; };
 Q.on = function (setting) { var s = JO.Meta && JO.Meta.set; return !s || s[setting] !== false; };
+// is this setting's effect unavailable at the current tier whatever the toggle says?
+Q.blocked = function (setting) { var any = false, all = true; for (var k in Q.GATE) if (Q.GATE[k] === setting) { any = true; if (Q.TABLE[k][Q.idx()] > 0) all = false; } return any && all; };
+// what a step from one tier down to another takes away, in words
+Q.lost = function (from, to) { var a = TIER[from], b = TIER[to], off = [], less = [], NAME = { dof: 'depth of field', blur: 'motion blur', visor: 'lens rain', shafts: 'light shafts', fogLayers: 'ground fog', puddles: 'puddles', reverb: 'reverb', monkeys: 'monkeys', shells: 'shell casings', grass: 'grass', birds: 'birds', lights: 'torch light', decals: 'bullet marks' };
+  for (var k in NAME) { var r = Q.TABLE[k]; if (r[a] > 0 && r[b] === 0) off.push(NAME[k]); else if (r[b] < r[a]) less.push(NAME[k]); }
+  return (off.length ? 'Off: ' + off.join(', ') + '. ' : '') + (less.length ? 'Reduced: ' + less.join(', ') + '.' : ''); };
 Q.n = function (key) { var row = Q.TABLE[key]; if (!row) return 0; var g = Q.GATE[key]; if (g && !Q.on(g)) return 0; return row[Q.idx()]; };
 
 // merge several geometries (already transformed) into one; position + normal only

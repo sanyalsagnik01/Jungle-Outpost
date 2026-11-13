@@ -63,6 +63,8 @@ function renderSettings() {
   body.appendChild(row('Hit-stop on kills', toggle('hitStop'))); body.appendChild(row('Adaptive difficulty', toggle('adaptive'), 'Enemies ease off after repeated deaths at one checkpoint'));
   head('DISPLAY'); var q = document.createElement('button'); q.className = 'tog on'; q.id = 'setQuality'; q.textContent = JO.Post.setting.toUpperCase(); q.addEventListener('click', function () { JO.Post.cycle(); q.textContent = JO.Post.setting.toUpperCase(); });
   body.appendChild(row('Graphics quality', q, 'Auto steps down by itself when the frame rate drops')); body.appendChild(row('Minimap and compass', toggle('minimap'))); body.appendChild(row('Weather effects', toggle('weather'))); body.appendChild(row('FPS counter', toggle('fps')));
+  head('LIVING WORLD — every effect can be switched off');
+  JO.Q.ROWS.forEach(function (r) { var b = toggle(r[0]); b.addEventListener('click', function () { JO.Events.emit('quality', JO.Post.tier); }); body.appendChild(row(r[1], b, r[2] + (JO.Q.blocked(r[0]) ? (r[2] ? ' · ' : '') + 'off at ' + JO.Post.tier.toUpperCase() + ' quality' : ''))); });
   head('KEYS — click one, then press the new key');
   ACTIONS.forEach(function (a) { var b = document.createElement('button'); b.className = 'tog key'; b.setAttribute('data-act', a[0]); b.textContent = M.keyLabel(a[0]);
     b.addEventListener('click', function () { if (listening) listening.btn.textContent = M.keyLabel(listening.act); listening = { act: a[0], btn: b }; b.textContent = 'PRESS A KEY'; b.classList.add('on'); }); body.appendChild(row(a[1], b)); });
