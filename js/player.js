@@ -78,8 +78,8 @@ P.applyUpgrade = function (id) {
 
 P.look = function (dx, dy) {
   if (JO.Game.state !== 'playing' || P.dead) return;
-  var s = 0.0023 * (I.ads ? 0.55 : 1);
-  P.yaw -= dx * s; P.pitch -= dy * s;
+  var st = JO.Meta.set, s = 0.0023 * (I.ads ? 0.55 : 1) * st.sens;
+  P.yaw -= dx * s; P.pitch -= dy * s * (st.invertY ? -1 : 1);
   if (P.pitch > 1.2) P.pitch = 1.2; else if (P.pitch < -1.2) P.pitch = -1.2;
 };
 
@@ -211,7 +211,7 @@ Wp.resetRun = function () {
 };
 Wp.unlockFor = function (levelIdx) {
   var newly = [];
-  Wp.slots.forEach(function (s) { if (!s.unlocked && s.cfg.unlockLevel <= levelIdx) { s.unlocked = true; s.mag = Wp.magSize(s.idx); s.reserve = s.cfg.reserve; if (s.cfg.unlockLevel === levelIdx && levelIdx > 0) newly.push(s); } });
+  Wp.slots.forEach(function (s) { if (!s.unlocked && (s.cfg.unlockLevel <= levelIdx || JO.Game.run.ng || JO.Game.mode)) { s.unlocked = true; s.mag = Wp.magSize(s.idx); s.reserve = s.cfg.reserve; if (s.cfg.unlockLevel === levelIdx && levelIdx > 0) newly.push(s); } });
   return newly.length ? newly : null;
 };
 Wp.refill = function (reserveToo) { Wp.slots.forEach(function (s) { s.mag = Wp.magSize(s.idx); if (reserveToo) s.reserve = Math.max(s.reserve, s.cfg.reserve); }); };
@@ -281,9 +281,16 @@ function shoot(s) {
   if (!bolt) FX.muzzleFlash(mx, my, mz, c.id === 'sg' ? 0.85 : (c.id === 'mr' ? 0.7 : 0.5));
   var spread = ((I.ads ? c.adsSpread : c.spread) + Wp.bloom + (P.onGround ? 0 : 1.5)) * Pk.spread(c.id);
   var anyHit = false, head = false, killed = false, crit = false, n = 0, start = Cam.dist + 0.2;
+  // aim assist (optional): bend the shot toward the nearest target within a few degrees of the crosshair
+  var afx = Cam.fx, afy = Cam.fy, afz = Cam.fz;
+  if (JO.Meta.set.aimAssist) { var bestDot = Math.cos(I.ads ? 0.05 : 0.075), L = E.list, tgt = null, AX = 0, AY = 0, AZ = 0;
+    for (var ai = 0; ai < L.length; ai++) { var ae = L[ai]; if (!ae.alive || !ae.active || (ae.invulnerable && ae.invulnerable())) continue;
+      var ax = ae.pos.x - Cam.x, ay = ae.pos.y + (ae.isBoss ? ae.boundY : (ae.type === 'drone' ? 0 : 1.15)) - Cam.y, az = ae.pos.z - Cam.z, al = Math.sqrt(ax * ax + ay * ay + az * az) || 1, ad = (ax * Cam.fx + ay * Cam.fy + az * Cam.fz) / al;
+      if (ad > bestDot && al < c.range && W.raycast(Cam.x, Cam.y, Cam.z, ax / al, ay / al, az / al, al) >= al - 0.8) { bestDot = ad; tgt = ae; AX = ax / al; AY = ay / al; AZ = az / al; } }
+    if (tgt) { afx = Cam.fx + (AX - Cam.fx) * 0.75; afy = Cam.fy + (AY - Cam.fy) * 0.75; afz = Cam.fz + (AZ - Cam.fz) * 0.75; } }
   for (var p = 0; p < c.pellets; p++) {
     var a = Math.tan(spread * DEG * Math.sqrt(Math.random())), ph = Math.random() * 6.283, tx = a * Math.cos(ph), ty = a * Math.sin(ph);
-    var dx = Cam.fx + Cam.rx * tx + Cam.ux * ty, dy = Cam.fy + Cam.uy * ty, dz = Cam.fz + Cam.rz * tx + Cam.uz * ty;
+    var dx = afx + Cam.rx * tx + Cam.ux * ty, dy = afy + Cam.uy * ty, dz = afz + Cam.rz * tx + Cam.uz * ty;
     var l = Math.sqrt(dx * dx + dy * dy + dz * dz); dx /= l; dy /= l; dz /= l;
     var ox = Cam.x + dx * start, oy = Cam.y + dy * start, oz = Cam.z + dz * start;
     E.hitscan(ox, oy, oz, dx, dy, dz, c.range, HIT);

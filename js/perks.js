@@ -36,7 +36,7 @@ Pk.update = function (dt) { if (Pk.adren > 0) Pk.adren -= dt; };
 
 /* ---------- salvage ---------- */
 Pk.addSalvage = function (n, x, y, z) {
-  n = Math.round(n * (Pk.has('v3') ? 1.5 : 1)); if (n <= 0) return;
+  n = Math.round(n * (Pk.has('v3') ? 1.5 : 1) * (1 + 0.5 * (JO.Game.run.ng || 0))); if (n <= 0) return;
   S.profile.salvage += n; JO.Game.run.salvage = (JO.Game.run.salvage || 0) + n;
   if (x !== undefined) JO.UI.dmgNum(x, y, z, '+' + n + ' SALVAGE', 'blk');
   Ev.emit('salvage', n);

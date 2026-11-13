@@ -84,9 +84,15 @@ function takeSnap(x, z, cpZ) { return { w: Wp.snapshot(), armor: P.armor, x: x, 
 function setObjective() {
   Game.objective = Game.bossDead ? 'Objective: <b>Reach the flag</b>' : (Game.bossFight ? 'Objective: <b>Defeat ' + Game.boss.name + '</b>' : 'Objective: <b>Reach the flag</b> — push north');
 }
-Game.setDifficulty = function (d) { Game.diff = d; Game.diffCfg = CFG.DIFF[d]; };
-function newRun() { return { intel: {}, idols: {}, mercy: 0, spared: false, knockouts: 0, salvage: 0, deaths: 0, alerts: 0, takedowns: 0 }; }
-Game.startRun = function (idx) { Game.resume = null; P.resetRun(); Wp.resetRun(); Game.total = newStats(); Game.ending = ''; Game.run = newRun(); Game.loadLevel(idx || 0); };
+Game.setDifficulty = function (d) { Game.diff = d; Game.refreshDiff(); };
+// the numbers enemies actually use: chosen difficulty x New Game+ level x survival wave, eased by adaptive difficulty
+Game.refreshDiff = function () {
+  var b = CFG.DIFF[Game.diff], ng = (Game.run && Game.run.ng) || 0, ad = JO.Meta ? JO.Meta.adaptK() : 0, wv = Game.mode === 'survival' && JO.Meta ? JO.Meta.wave : 0;
+  Game.diffCfg = { label: b.label, dmg: b.dmg * (1 + 0.25 * ng) * (1 - 0.12 * ad), acc: b.acc * (1 + 0.1 * ng) * (1 - 0.1 * ad), hp: b.hp * (1 + 0.35 * ng) * (1 + 0.06 * wv) };
+};
+var stopT = 0; Game.hitStop = function (t) { if (t > stopT) stopT = t; };
+function newRun() { return { intel: {}, idols: {}, mercy: 0, spared: false, knockouts: 0, salvage: 0, deaths: 0, alerts: 0, takedowns: 0, ng: 0 }; }
+Game.startRun = function (idx, ng) { Game.resume = null; P.resetRun(); Wp.resetRun(); Game.total = newStats(); Game.ending = ''; Game.run = newRun(); Game.run.ng = ng | 0; Game.refreshDiff(); if (Game.mode) Game.noCut = true; Game.loadLevel(idx || 0); };
 
 /* ---------- saved run: written at every checkpoint, read by CONTINUE ---------- */
 Game.saveRun = function (cpIdx) {
@@ -104,7 +110,7 @@ Game.continueRun = function () {
   P.maxHp = Math.round(CFG.PLAYER.hp * (1 + 0.25 * P.up.hp)); P.maxPlates = Math.max(1, r.maxPlates | 0);
   for (k in base) if (r.run && r.run[k] !== undefined) base[k] = r.run[k]; Game.run = base;
   for (k in ns) if (r.total && r.total[k] !== undefined) ns[k] = +r.total[k] || 0; Game.total = ns;
-  Game.ending = ''; Game.noCut = true; Game.resume = r; Game.loadLevel(r.level);
+  Game.ending = ''; Game.noCut = true; Game.resume = r; Game.refreshDiff(); Game.loadLevel(r.level);
 };
 function applyResume(r) {
   var k, ns = newStats(); for (k in ns) if (r.stats && r.stats[k] !== undefined) ns[k] = +r.stats[k] || 0; Game.stats = ns;
@@ -124,6 +130,11 @@ Game.loadLevel = function (idx) {
   Game.boss = B.create(L.boss);
   levelSnap = snap = takeSnap(0, 3, 1e9);
   if (Game.resume) { applyResume(Game.resume); Game.resume = null; }
+  if (Game.mode === 'bossrush' || Game.mode === 'survival') {       // straight to the arena
+    var az = Game.mode === 'survival' ? W.AC + 6 : W.A0 + 7; P.place(0, az); pending.length = 0; snap = levelSnap = takeSnap(0, az, -1e9);
+    for (var q = 0; q < W.checkpoints.length; q++) W.setCheckpointReached(W.checkpoints[q]);
+    if (Game.mode === 'survival') { W.setBarrier('entry', false); E.release(Game.boss); P.armor = P.armorCap(); }
+  }
   setObjective(); UI.setLevelHeader(L); UI.bossBar(null); UI.hud(false);
   Game.state = 'intro'; I.exitLock(); A.setIntensity(-1); UI.refreshTouch(); bossSeen = false; Ev.emit('level_load', idx); Game.saveRun(snap.cpZ > 1e8 ? -1 : cpIndex(snap.cpZ));
   var brief = function () { UI.showIntro(L, unlock); };
@@ -146,17 +157,18 @@ Game.pause = function () {
   else if (Game.state === 'paused') { St.pause(false); Game.beginPlay(); }
 };
 Game.toTitle = function () {
-  St.reset(); St.pause(false); Game.state = 'title'; UI.hud(false); UI.refreshTitle(); UI.show('scrTitle'); I.exitLock(); A.setIntensity(-1); A.setAmbient(false); A.setDrone(0); P.model.g.visible = false; UI.refreshTouch();
+  St.reset(); St.pause(false); Game.state = 'title'; Game.mode = ''; UI.hud(false); UI.refreshTitle(); UI.show('scrTitle'); I.exitLock(); A.setIntensity(-1); A.setAmbient(false); A.setDrone(0); P.model.g.visible = false; UI.refreshTouch();
 };
 Game.onPlayerDead = function () { Game.run.deaths = (Game.run.deaths || 0) + 1; Ev.emit('player_dead'); Game.state = 'dying'; deadT = 1.5; Game.timescale = 1; slowT = 0; };
 Game.retryCheckpoint = function () {
+  if (Game.mode === 'survival') { JO.Meta.startMode('survival'); return; }
   St.clear(); St.endCine(); Ev.emit('retry'); E.reset(); H.reset(); FX.reset(); UI.clearFloat(); I.clear();
   Wp.restore(snap.w); P.armor = snap.armor; P.hp = P.maxHp; P.place(snap.x, snap.z); P.invuln = 2;      // brief spawn protection
   buildPending(snap.cpZ); Game.bossFight = Game.bossDying = false; Game.timescale = 1; slowT = 0; supplyT = 12;
   if (!Game.bossDead) { Game.boss = B.create(CFG.LEVELS[Game.levelIdx].boss); W.resetBarriers(); }
   UI.bossBar(null); setObjective(); Game.beginPlay();
 };
-Game.restartLevel = function () { St.pause(false); Game.noCut = true; Wp.restore(levelSnap.w); P.armor = levelSnap.armor; Game.loadLevel(Game.levelIdx); };
+Game.restartLevel = function () { if (Game.mode === 'survival') { St.pause(false); JO.Meta.startMode('survival'); return; } St.pause(false); Game.noCut = true; Wp.restore(levelSnap.w); P.armor = levelSnap.armor; Game.loadLevel(Game.levelIdx); };
 
 function startBoss() {
   Game.bossFight = true; W.setBarrier('entry', false); A.play('gate'); Game.boss.start(); UI.bossBar(Game.boss); setObjective();
@@ -189,7 +201,7 @@ Game.completeLevel = completeLevel;
 /* ---------- one fixed logic step ---------- */
 function step(dt) {
   if (Game.state === 'dying') { deadT -= dt; if (deadT <= 0) { Game.state = 'dead'; I.exitLock(); A.setIntensity(-1); UI.hud(false); UI.refreshTouch();
-    UI.showDead(Game.bossFight ? Game.boss.name + ' still stands. You will restart at the arena gate.' : 'The jungle keeps what it takes. Your last checkpoint is waiting.'); return; } }
+    UI.showDead(Game.mode === 'survival' ? 'You held the arena until wave ' + JO.Meta.wave + '. Best: wave ' + (S.profile.best.survival | 0) + '.' : (Game.bossFight ? Game.boss.name + ' still stands. You will restart at the arena gate.' : 'The jungle keeps what it takes. Your last checkpoint is waiting.')); return; } }
   Game.hint = '';
   if (Game.debug.bot) bot(dt);
   if (Pr.hack) { I.moveX = I.moveY = 0; I.fire = false; I.sprint = false; I.jumpPressed = I.rollPressed = false; }      // hands are on the terminal
@@ -210,8 +222,9 @@ function step(dt) {
     if (Wp.slots[0].reserve < CFG.PLAYER.checkpointAmmo) Wp.slots[0].reserve = CFG.PLAYER.checkpointAmmo;      // flags double as a rifle resupply
     snap = takeSnap(0, cp.z + 1.5, cp.z);
     A.play('checkpoint'); UI.banner('CHECKPOINT — HEALED AND RESUPPLIED', 2.2, false); Ev.emit('checkpoint', Game.levelIdx, c); Game.saveRun(c); }
-  if (!Game.bossFight && !Game.hint && E.count() === 0 && Game.nearBench()) { Game.hint = I.isTouch ? 'TAP <kbd>BENCH</kbd> — SKILLS AND WEAPON MODS' : 'PRESS <kbd>B</kbd> — FIELD BENCH: SKILLS AND WEAPON MODS'; Game.benchHere = true; if (I.benchPressed) { I.endStep(); Game.openBench(); return; } } else Game.benchHere = false;
-  if (!Game.bossFight && !Game.bossDead && P.pos.z < W.A0 - 5) startBoss();
+  if (!Game.bossFight && !Game.mode && !Game.hint && E.count() === 0 && Game.nearBench()) { Game.hint = I.isTouch ? 'TAP <kbd>BENCH</kbd> — SKILLS AND WEAPON MODS' : 'PRESS <kbd>B</kbd> — FIELD BENCH: SKILLS AND WEAPON MODS'; Game.benchHere = true; if (I.benchPressed) { I.endStep(); Game.openBench(); return; } } else Game.benchHere = false;
+  if (Game.mode === 'survival') JO.Meta.survivalStep(dt);
+  else if (!Game.bossFight && !Game.bossDead && P.pos.z < W.A0 - 5) startBoss();
   if (Game.bossDead && Math.hypot(P.pos.x - W.flag.x, P.pos.z - W.flag.z) < (JO.Finale.mira ? 4.2 : 2.8)) { if (JO.Finale.mira) JO.Finale.begin(); else completeLevel(); I.endStep(); return; }
 
   // boss-arena safety net so nobody is soft-locked without ammo or health
@@ -237,6 +250,7 @@ function tick(real) {
     I.poll();
     if (slowT > 0) { slowT -= real; if (slowT <= 0) Game.timescale = 1; }
     if (Game.debug.speed > 1) { for (var k = 0; k < Game.debug.speed && (Game.state === 'playing' || Game.state === 'dying'); k++) step(STEP); fdt = STEP * Game.debug.speed; }
+    else if (stopT > 0) { stopT -= real; alpha = acc / STEP; }       // hit-stop: the world holds for a few frames
     else { acc += real * Game.timescale; var n = 0; while (acc >= STEP && n < 5 && (Game.state === 'playing' || Game.state === 'dying')) { step(STEP); acc -= STEP; n++; }
       if (n === 5) acc = 0; alpha = acc / STEP; fdt = real * Game.timescale; }
   }
@@ -253,7 +267,7 @@ function tick(real) {
   if (Game.state !== 'paused') St.update(real); St.cutUpdate(real);
   A.update(real);
   if (dbgOn) { dbgT -= real; if (dbgT <= 0) { dbgT = 0.2; debugOverlay(real); } }
-  JO.Weather.update(fdt, real); JO.Radar.update(real);
+  JO.Weather.update(fdt, real); JO.Radar.update(real); JO.Meta.frame(real);
   if (!Game.debug.noRender) JO.Post.render(W.scene, cam, real);
 }
 
@@ -287,7 +301,7 @@ Game.toggleDebug = function (on) {
 function bind(id, fn) { document.getElementById(id).addEventListener('click', function (e) { A.init(); A.play('ui'); fn(e); }); }
 Game.init = function () {
   var canvas = document.getElementById('game');
-  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas); St.init(); Pk.init(); Ar.init(W.scene); Sl.init(); Pr.init(); JO.Weather.init(); JO.Radar.init(); JO.Post.init(); JO.Codex.init(W.scene); JO.Finale.init(W.scene);
+  W.init(canvas); FX.init(W.scene); H.init(W.scene); E.init(W.scene); P.init(W.scene); initPickups(W.scene); UI.init(); I.init(canvas); St.init(); Pk.init(); Ar.init(W.scene); Sl.init(); Pr.init(); JO.Weather.init(); JO.Radar.init(); JO.Post.init(); JO.Meta.init(); JO.Codex.init(W.scene); JO.Finale.init(W.scene);
   FX.pMat.uniforms.uScale.value = window.innerHeight;
   W.build(CFG.LEVELS[0]); P.model.g.visible = false;                       // title backdrop
   // models load behind the title screen; whatever fails simply stays primitive

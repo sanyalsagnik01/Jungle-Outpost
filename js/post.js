@@ -43,7 +43,6 @@ Po.apply = function (tier) {
   if (tier !== 'low' && !build()) tier = 'low';
   Po.tier = tier; if (bloom) bloom.enabled = tier === 'high'; Po.resize();
   if (JO.Weather) JO.Weather.quality = tier === 'low' ? 1 : 2;
-  W.renderer.shadowMap.autoUpdate = true;
 };
 // 'auto' | 'low' | 'med' | 'high'
 Po.set = function (s, quiet) {
@@ -61,6 +60,8 @@ Po.render = function (scene, cam, real) {
   Po.fps += (1 / Math.max(0.001, real) - Po.fps) * 0.05;
   if (Po.setting === 'auto' && JO.Game.state === 'playing' && !JO.Game.debug.bot) { warm += real;
     if (warm > 4) { var i = TIERS.indexOf(Po.tier); if (Po.fps < 27 && i > 0) { slowT += real; if (slowT > 3) { slowT = 0; warm = 0; Po.apply(TIERS[i - 1]); JO.UI.toast('GRAPHICS', 'Frame rate low — switched to ' + Po.tier.toUpperCase() + ' (F4 changes it)', '#58e0d0'); } } else slowT = 0; } }
+  // LOW also refreshes shadows only every other frame
+  var sm = W.renderer.shadowMap; if (Po.tier === 'low') { sm.autoUpdate = false; sm.needsUpdate = ((Po.n = (Po.n | 0) + 1) & 1) === 0; } else sm.autoUpdate = true;
   if (Po.tier === 'low' || !composer) { W.renderer.render(scene, cam); return; }
   var u = final.uniforms, g = Po.grade || LOOK[0], Wx = JO.Weather, P = JO.Player, wet = Wx ? Wx.rain * 0.12 + Wx.fog * 0.1 : 0;
   u.uTint.value.set(g.tint[0], g.tint[1], g.tint[2]); u.uSat.value = g.sat - wet; u.uCon.value = g.con; u.uFlash.value = Wx ? Wx.flash : 0;

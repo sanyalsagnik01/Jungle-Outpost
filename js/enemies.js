@@ -77,8 +77,8 @@ function Enemy(type) {
   this.active = false; this.alive = false; this.emis = 0;
   E.scene.add(this.mesh); this.mesh.visible = false;
   if (type === 'sniper') {
-    this.laserMat = new THREE.MeshBasicMaterial({ color: 0xff1808, transparent: true, opacity: 0.8, fog: false, depthWrite: false, blending: THREE.AdditiveBlending });
-    this.laser = new THREE.Mesh(G.box, this.laserMat); this.dot = new THREE.Mesh(G.ico0, new THREE.MeshBasicMaterial({ color: 0xff2a10, fog: false }));
+    this.laserMat = new THREE.MeshBasicMaterial({ color: E.laserHex || 0xff1808, transparent: true, opacity: 0.8, fog: false, depthWrite: false, blending: THREE.AdditiveBlending });
+    this.laser = new THREE.Mesh(G.box, this.laserMat); this.dot = new THREE.Mesh(G.ico0, new THREE.MeshBasicMaterial({ color: E.laserHex || 0xff2a10, fog: false }));
     this.laser.visible = this.dot.visible = false; this.laser.frustumCulled = false; E.scene.add(this.laser); E.scene.add(this.dot);
   }
   // GLB presentation (optional): the primitive group stays as the anchor and as the fallback
@@ -187,7 +187,8 @@ EP.update = function (dt) {
   else M.walk(m, this.walk, this.moving ? 1 : 0, this.type === 'runner' && this.sub !== 'windup');
   var em = this.flash > 0 ? 0x777777 : (this.tint || E.baseEmis); if (this.flash > 0) this.flash -= dt;
   if (em !== this.emis) { this.emis = em; for (var k = 0; k < this.mats.length; k++) this.mats[k].emissive.setHex(em); }
-  if (this.gfx) animate(this, dt);
+  // far-off enemies animate at a third of the rate
+  if (this.gfx) { if (this.dist > 65) { this._adt = (this._adt || 0) + dt; this._an = (this._an | 0) + 1; if (this._an % 3 === 0) { animate(this, this._adt); this._adt = 0; } } else { animate(this, dt + (this._adt || 0)); this._adt = 0; } }
 };
 
 function patrol(e, dt) {
@@ -361,6 +362,8 @@ E.AI = AI;
    MANAGER
    ============================================================ */
 E.init = function (scene) { E.scene = scene; };
+// sniper laser colour (colourblind setting)
+E.setLaser = function (hex) { E.laserHex = hex; var all = E.list.concat(E.pools.sniper || []); for (var i = 0; i < all.length; i++) if (all[i].laserMat) { all[i].laserMat.color.setHex(hex); all[i].dot.material.color.setHex(hex); } };
 E.spawn = function (type, x, z, o) {
   var pool = E.pools[type] || (E.pools[type] = []), e = pool.length ? pool.pop() : new Enemy(type);
   e.spawn(x, z, o); E.list.push(e); return e;

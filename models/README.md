@@ -129,3 +129,10 @@ If you edit a `.glb` by hand, run `python tools/bundle_models.py` afterwards.
 ## Why there is a bundle
 
 Browsers will not let a page opened from disk (`file://`) fetch other files, so `GLTFLoader.load('models/kade.glb')` fails when you double-click `index.html`. The loader therefore reads base64 copies from `models.bundle.js` first, and only fetches the `.glb` files when the game is served over HTTP and the bundle lacks an entry.
+
+## Where the later systems use these models
+
+- `crossbow.glb` and `flamethrower.glb` are weapons 4 and 5; `frag_grenade.glb` and `smoke_grenade.glb` are the thrown grenades (`js/arsenal.js`).
+- `env_jeep.glb` is also the drivable jeep in Level 2 (`js/props.js`), with a box jeep as its fallback.
+- Explosive barrels, breakable crates, the hackable gate, its terminal, the levers, the spike rows, the log traps and the gantry are built from primitives in `js/props.js` so they can move, break and change colour; `env_barrel`, `env_crate`, `env_gate`, `env_lever` and `env_terminal` remain available as static scenery.
+

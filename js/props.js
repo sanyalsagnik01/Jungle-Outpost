@@ -238,7 +238,7 @@ Pr.drive = function (dt) {
   if (Math.abs(v.sp) > 3 && Math.random() < 0.4) FX.puff(v.x - fx * 2, 0.3, v.z - fz * 2, 0x8a7a5a, 0.4);
   if (Math.abs(v.sp) > 5) {
     for (i = L.length - 1; i >= 0; i--) { var e = L[i]; if (!e || !e.alive || e.isBoss || e.type === 'drone' || e.pos.y > 1.5 || (e.ramT > v.t)) continue;
-      if (Math.hypot(e.pos.x - v.x, e.pos.z - v.z) < 2.0) { e.ramT = v.t + 0.6; JO.Arsenal.hurt(e, 95); JO.UI.dmgNum(e.pos.x, e.pos.y + 2, e.pos.z, 'RAMMED', 'crit'); A.playAt('stomp', v.x, v.z, 0.7); v.sp *= 0.8; vehDamage(6); } }
+      if (Math.hypot(e.pos.x - v.x, e.pos.z - v.z) < 2.0) { e.ramT = v.t + 0.6; JO.Arsenal.hurt(e, 95); JO.UI.dmgNum(e.pos.x, e.pos.y + 2, e.pos.z, 'RAMMED', 'crit'); Ev.emit('ram', e); A.playAt('stomp', v.x, v.z, 0.7); v.sp *= 0.8; vehDamage(6); } }
     for (i = 0; i < Pr.list.length; i++) { var p = Pr.list[i]; if (p.alive && (p.kind === 'barrel' || p.kind === 'crate') && Math.hypot(p.x - v.x, p.z - v.z) < 2.1) destroy(p, 'ram'); }
   }
   if (Math.abs(v.sp) > 1 && Math.floor(v.t * 3) !== Math.floor((v.t - dt) * 3)) Ev.emit('noise', v.x, v.z, 26, 'engine');

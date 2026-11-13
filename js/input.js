@@ -11,14 +11,15 @@ var I = JO.Input = {
   moveX: 0, moveY: 0, fire: false, ads: false, sprint: false,
   jumpPressed: false, rollPressed: false, reloadPressed: false, interactPressed: false, meleePressed: false, nadePressed: false, smokePressed: false, benchPressed: false, crouchPressed: false, weapon: 0,
   locked: false, isTouch: false, keys: {}, joy: { x: 0, y: 0 }, external: false,
-  onLook: null, onPause: null, onLockLost: null, onMute: null, onCanvasClick: null
+  onLook: null, onPause: null, onLockLost: null, onMute: null, onCanvasClick: null,
+  translate: function (code) { return code; }
 };
 var K = I.keys, canvas, intentional = false, fireEnd = false;   // fireEnd: release is applied after a logic step, so a quick tap still fires
 
 I.init = function (cv) {
   canvas = cv;
   window.addEventListener('keydown', function (e) {
-    var c = e.code;
+    var c = I.translate(e.code); if (!c) return;                 // rebinding: a physical key stands in for the built-in one
     if (c === 'Space' || c === 'Tab' || c.indexOf('Arrow') === 0 || (e.ctrlKey && JO.Game && JO.Game.state === 'playing')) e.preventDefault();
     if (e.repeat) return;
     K[c] = true;
@@ -40,7 +41,7 @@ I.init = function (cv) {
     else if (c === 'Escape' || c === 'KeyP') { if (I.onPause) I.onPause(); }
     else if (c === 'KeyM') { if (I.onMute) I.onMute(); }
   });
-  window.addEventListener('keyup', function (e) { K[e.code] = false; });
+  window.addEventListener('keyup', function (e) { var c = I.translate(e.code); if (c) K[c] = false; });
   window.addEventListener('blur', function () { for (var k in K) K[k] = false; I.fire = false; I.ads = false; });
 
   canvas.addEventListener('mousedown', function (e) {

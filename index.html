@@ -166,6 +166,21 @@ body.touch #minimap{width:104px;height:104px;top:60px}
 #hackBar{height:6px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2)}#hackFill{display:block;height:100%;background:var(--cyan);transform-origin:left center}
 #hack small{display:block;margin-top:8px;font-size:11px;opacity:.8}#hackPad{display:none;gap:8px;justify-content:center;margin-top:10px}body.touch #hackPad{display:flex}
 #hackPad button{pointer-events:auto;width:54px;height:54px;font-size:24px;background:rgba(20,34,36,.9);color:var(--bone);border:1px solid var(--cyan)}
+body.touch #minimap{top:150px}
+.btn.sm{min-width:0;font-size:15px;letter-spacing:3px;padding:9px 20px;margin:3px}.row.menu{max-width:640px;margin:4px 0}
+#fps{position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:36;font:11px var(--mono);letter-spacing:1px;color:#cfeee8;background:rgba(0,0,0,.6);padding:3px 10px;pointer-events:none}
+#setBody{width:min(680px,94vw);max-height:62vh;overflow:auto;text-align:left;padding:4px 10px 4px 2px;margin-bottom:8px}
+#setBody h3{margin:14px 0 4px;color:var(--amber);opacity:1;border-bottom:1px solid rgba(255,182,46,.35);padding-bottom:3px}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:5px 2px;border-bottom:1px solid rgba(255,255,255,.07);font-size:14px}
+.srow label small{display:block;font-size:11px;opacity:.65}.srow span{display:flex;align-items:center;gap:10px}.srow span b{font-family:var(--mono);font-weight:normal;font-size:12px;min-width:44px;text-align:right}
+.srow input[type=range]{pointer-events:auto;width:min(220px,40vw);accent-color:var(--amber)}
+.tog{pointer-events:auto;font-family:var(--mono);font-size:12px;letter-spacing:2px;min-width:86px;padding:6px 12px;background:transparent;color:var(--bone);border:1px solid rgba(233,228,207,.4);cursor:pointer}
+.tog.on{background:var(--amber);color:var(--ink);border-color:var(--amber)}.tog.key{min-width:120px}.tog:focus-visible{outline:2px solid #fff}
+#achGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;width:min(940px,95vw);max-height:58vh;overflow:auto;margin-bottom:10px;text-align:left}
+.ach{padding:8px 10px;background:rgba(20,34,20,.8);border-left:3px solid rgba(255,255,255,.2);opacity:.5}.ach.got{opacity:1;border-left-color:#ffd060;background:rgba(48,44,16,.9)}
+.ach b{display:block;font-family:var(--head);font-weight:normal;letter-spacing:2px;font-size:15px;color:var(--bone)}.ach.got b{color:#ffd060}.ach small{font-size:12px;opacity:.85}
+body.cb{--red:#ffe600;--cyan:#7ab8ff}body.cb #hpFill{background:linear-gradient(90deg,#b08a00,#ffe600)}
+body.cb #vignette{background:radial-gradient(ellipse at center,rgba(255,230,0,0) 45%,rgba(255,220,0,.7) 100%)}
 #hudNades{margin-top:5px;font-size:11px;letter-spacing:1px;opacity:.85}#hudSalvage{font-size:12px;margin-top:3px;color:var(--amber)}
 #benchSalvage{font-family:var(--head);font-size:26px;letter-spacing:4px;color:var(--amber);margin:-6px 0 4px}
 #benchBody{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:min(1100px,96vw);max-height:56vh;overflow:auto;padding:2px}
@@ -283,6 +298,7 @@ body.touch #prompt{top:40%}
   <div id="hackPad"><button data-dir="left">&larr;</button><button data-dir="up">&uarr;</button><button data-dir="down">&darr;</button><button data-dir="right">&rarr;</button></div></div>
 <div id="toasts"></div>
 <pre id="dbg" class="hidden"></pre>
+<div id="fps" class="hidden"></div>
 
 <div id="topR">
   <button id="btnMute" title="Mute (M)" aria-label="Toggle sound">&#9835;</button>
@@ -295,9 +311,10 @@ body.touch #prompt{top:40%}
   <div id="loadWrap"><div id="loadBar"><i id="loadFill"></i></div><div id="loadTxt">LOADING MODELS</div></div>
   <button class="btn hidden" id="btnContinue">CONTINUE</button>
   <button class="btn" id="btnStart">START MISSION</button>
-  <button class="btn ghost" id="btnBench">FIELD BENCH</button>
-  <button class="btn ghost" id="btnCodex">CODEX</button>
-  <button class="btn ghost" id="btnControls">CONTROLS</button>
+  <div class="row menu">
+    <button class="btn ghost sm" id="btnModes">MODES</button><button class="btn ghost sm" id="btnBench">FIELD BENCH</button><button class="btn ghost sm" id="btnCodex">CODEX</button>
+    <button class="btn ghost sm" id="btnAch">ACHIEVEMENTS</button><button class="btn ghost sm" id="btnSettings">SETTINGS</button><button class="btn ghost sm" id="btnControls">CONTROLS</button>
+  </div>
   <div class="row diff" id="diffRow">
     <button data-d="easy">EASY</button><button data-d="normal" class="on">NORMAL</button><button data-d="hard">HARD</button>
   </div>
@@ -315,7 +332,7 @@ body.touch #prompt{top:40%}
     <tr><td>G / Q</td><td>Throw frag grenade / smoke grenade</td></tr><tr><td>B</td><td>Field bench at a reached checkpoint (skills, weapon mods)</td></tr>
     <tr><td>X</td><td>Crouch: quieter, harder to see</td></tr><tr><td>F</td><td>Silent takedown from behind an unaware enemy</td></tr>
     <tr><td>E</td><td>Also: hack terminals, pull levers, drive the jeep</td></tr><tr><td>E</td><td>Open supply crates</td></tr>
-    <tr><td>F4</td><td>Graphics quality: Auto / High / Medium / Low</td></tr><tr><td>Esc</td><td>Pause</td></tr><tr><td>M</td><td>Mute</td></tr>
+    <tr><td>F4</td><td>Graphics quality: Auto / High / Medium / Low</td></tr><tr><td>Settings</td><td>Every key above can be rebound; sensitivity, volume, subtitles and accessibility live there too</td></tr><tr><td>Esc</td><td>Pause</td></tr><tr><td>M</td><td>Mute</td></tr>
   </table>
   <div class="note" style="margin:0 0 14px">Tip: prefer <b>C</b> for rolling &mdash; browsers reserve Ctrl+W to close the tab.<br>
   On phones and tablets: left thumb moves, right thumb looks, buttons fire / jump / roll / reload.</div>
@@ -332,6 +349,7 @@ body.touch #prompt{top:40%}
   <h2>PAUSED</h2>
   <button class="btn" id="btnResume">RESUME</button>
   <button class="btn ghost" id="btnPauseCodex">CODEX</button>
+  <button class="btn ghost" id="btnPauseSettings">SETTINGS</button>
   <button class="btn ghost" id="btnPauseRestart">RESTART LEVEL</button>
   <button class="btn ghost" id="btnPauseQuit">QUIT TO TITLE</button>
   <div class="note">WASD move &middot; Shift sprint &middot; Space jump &middot; C roll &middot; LMB shoot &middot; RMB aim &middot; R reload &middot; 1-5 weapons &middot; G frag &middot; Q smoke &middot; X crouch &middot; F takedown &middot; E interact &middot; B bench &middot; M mute</div>
@@ -377,6 +395,26 @@ body.touch #prompt{top:40%}
   <button class="btn" id="btnBenchClose">BACK</button>
 </div>
 
+<div id="scrSettings" class="screen hidden">
+  <h2>SETTINGS</h2>
+  <div id="setBody"></div>
+  <button class="btn" id="btnSetBack">BACK</button>
+</div>
+
+<div id="scrAch" class="screen hidden">
+  <h2>ACHIEVEMENTS</h2>
+  <div class="note" id="achCount" style="margin:0 0 10px"></div>
+  <div id="achGrid"></div>
+  <button class="btn" id="btnAchBack">BACK</button>
+</div>
+
+<div id="scrModes" class="screen hidden">
+  <h2>MODES</h2>
+  <div class="cards" id="modeCards"></div>
+  <div class="note">Modes use your profile's skills and weapon mods. They do not overwrite a saved campaign run.</div>
+  <button class="btn" id="btnModesBack">BACK</button>
+</div>
+
 <div id="scrChoice" class="screen clear hidden">
   <h3>MIRA WAITS. THE BLOOM HUMS.</h3><h2>YOUR CHOICE</h2>
   <div class="cards" id="choiceCards"></div>
@@ -414,6 +452,7 @@ body.touch #prompt{top:40%}
 <script src="js/post.js"></script>
 <script src="js/codex.js"></script>
 <script src="js/finale.js"></script>
+<script src="js/meta.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

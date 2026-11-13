@@ -76,7 +76,7 @@ FX.reset = function () {
   FX.shake = 0; muzzle.visible = false; muzzleLight.intensity = 0;
 };
 
-FX.addShake = function (m) { if (m > FX.shake) FX.shake = Math.min(1.4, m); };
+FX.addShake = function (m) { m *= FX.shakeK === undefined ? 1 : FX.shakeK; if (m > FX.shake) FX.shake = Math.min(1.4, m); };
 
 /* particles */
 FX.burst = function (x, y, z, n, hex, speed, life, grav, size, up) {
@@ -143,18 +143,19 @@ function ringGet() { for (var i = 0; i < rings.length; i++) if (!rings[i].used) 
 FX.ringFree = function (r) { if (!r) return; r.used = false; r.auto = false; r.ring.visible = r.disc.visible = r.wall.visible = false; };
 FX.marker = function (x, z, radius, dur, hex) {
   var r = ringGet(); if (!r) return null; r.auto = true; r.life = r.dur = dur; r.r = radius;
-  r.mat.color.setHex(hex || 0xff3020); r.dm.color.setHex(hex || 0xff3020); r.mat.opacity = 0.95;
+  hex = FX.warnHex || hex || 0xff3020;                          // colourblind mode swaps every danger marker to one safe colour
+  r.mat.color.setHex(hex); r.dm.color.setHex(hex); r.mat.opacity = 0.95;
   r.ring.position.set(x, 0.09, z); r.ring.scale.set(radius, 1, radius); r.disc.position.set(x, 0.07, z); r.disc.scale.set(0.01, 1, 0.01);
   r.ring.visible = r.disc.visible = true; return r;
 };
 // shockwave ring: caller drives radius every step
-FX.waveAlloc = function (hex) { var r = ringGet(); if (!r) return null; r.auto = false; r.mat.color.setHex(hex || 0xffb030); r.mat.opacity = 0.9; r.ring.visible = r.wall.visible = true; return r; };
+FX.waveAlloc = function (hex) { var r = ringGet(); if (!r) return null; r.auto = false; r.mat.color.setHex(FX.warnHex || hex || 0xffb030); r.mat.opacity = 0.9; r.ring.visible = r.wall.visible = true; return r; };
 FX.waveSet = function (r, x, z, radius, fade) { r.ring.position.set(x, 0.1, z); r.ring.scale.set(radius, 1, radius); r.wall.position.set(x, 0.3, z); r.wall.scale.set(radius, 0.6, radius); r.mat.opacity = 0.85 * fade; };
 FX.groundLine = function (x0, z0, x1, z1, width, dur, hex) {
   var l = null; for (var i = 0; i < lines.length; i++) if (lines[i].life <= 0) { l = lines[i]; break; } if (!l) return null;
   var dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz);
   l.mesh.position.set((x0 + x1) / 2, 0.08, (z0 + z1) / 2); l.mesh.scale.set(width, 1, len); l.mesh.rotation.y = Math.atan2(dx, dz);
-  l.mat.color.setHex(hex || 0xff2010); l.life = l.dur = dur; l.mesh.visible = true; return l;
+  l.mat.color.setHex(FX.warnHex || hex || 0xff2010); l.life = l.dur = dur; l.mesh.visible = true; return l;
 };
 FX.explosion = function (x, y, z, radius) {
   var f = null; for (var i = 0; i < flashes.length; i++) if (flashes[i].life <= 0) { f = flashes[i]; break; }

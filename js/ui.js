@@ -134,7 +134,8 @@ UI.showDone = function (L, st, choices, onPick) {
 };
 UI.showWin = function (total, ending, run) {
   var D = window.JO_STORY || {}, e = ending && D.endings && D.endings[ending], n = Object.keys(JO.Save.profile.endings).length;
-  $('winSub').textContent = e ? 'ENDING ' + n + ' OF 3 FOUND' : 'THE OUTPOST HAS FALLEN'; $('winTitle').textContent = e ? e.title : 'MISSION ACCOMPLISHED';
+  var rush = JO.Game.mode === 'bossrush';
+  $('winSub').textContent = rush ? 'ALL THREE DOWN IN ' + fmtTime(total.time) : (e ? 'ENDING ' + n + ' OF 3 FOUND' + (run && run.ng ? '  ·  NEW GAME+ ' + run.ng : '') : 'THE OUTPOST HAS FALLEN'); $('winTitle').textContent = rush ? 'BOSS RUSH COMPLETE' : (e ? e.title : 'MISSION ACCOMPLISHED');
   $('winStory').textContent = e ? e.hint + (run ? '  Mercy: ' + run.mercy + '.' : '') : "The Commander's walker burns in the courtyard. Extraction is inbound.";
   statBlock($('winStats'), total); UI.show('scrWin'); };
 UI.showDead = function (msg) { $('deadMsg').textContent = msg; UI.show('scrDead'); };

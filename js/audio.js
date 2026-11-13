@@ -7,16 +7,16 @@
 (function () {
 'use strict';
 var JO = window.JO;
-var A = JO.Audio = { ctx: null, muted: false, intensity: -1 };
+var A = JO.Audio = { ctx: null, muted: false, intensity: -1, volume: 1, musicVol: 1, combat: 0, tense: false };
 var ctx, master, sfx, music, amb, vox, noiseBuf, droneGain, last = {};
 var VOWELS = [730, 530, 390, 570, 440, 300, 640];
 
 A.init = function () {
   if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
   try { var C = window.AudioContext || window.webkitAudioContext; ctx = A.ctx = new C(); } catch (e) { return; }
-  master = ctx.createGain(); master.gain.value = A.muted ? 0 : 0.8; master.connect(ctx.destination); A.master = master;
+  master = ctx.createGain(); master.gain.value = A.muted ? 0 : 0.8 * A.volume; master.connect(ctx.destination); A.master = master;
   sfx = ctx.createGain(); sfx.gain.value = 0.9; sfx.connect(master);
-  music = ctx.createGain(); music.gain.value = 0.42; music.connect(master);
+  music = ctx.createGain(); music.gain.value = 0.42 * A.musicVol; music.connect(master);
   amb = ctx.createGain(); amb.gain.value = 0.0; amb.connect(master);
   vox = ctx.createGain(); vox.gain.value = 1; vox.connect(master);
   var n = ctx.sampleRate * 2; noiseBuf = ctx.createBuffer(1, n, ctx.sampleRate);
@@ -25,7 +25,8 @@ A.init = function () {
   nextNote = ctx.currentTime + 0.1;
 };
 
-A.setMute = function (m) { A.muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : 0.8, ctx.currentTime, 0.02); };
+A.setMute = function (m) { A.muted = m; A.applyVolume(); };
+A.applyVolume = function () { if (!master) return; master.gain.setTargetAtTime(A.muted ? 0 : 0.8 * A.volume, ctx.currentTime, 0.02); music.gain.setTargetAtTime(0.42 * A.musicVol, ctx.currentTime, 0.05); };
 
 function tone(o) {
   var t = ctx.currentTime + (o.delay || 0), osc = ctx.createOscillator(), g = ctx.createGain();
@@ -93,6 +94,14 @@ var S = {
 
 // later modules add their own sounds here
 A.sounds = S; A.tone = function (o) { if (ctx) tone(o); }; A.noise = function (o) { if (ctx) noise(o); };
+S.stepGrass = function (v) { noise({ dur: 0.09, vol: 0.08 * v, f: 900, f2: 400 }); };
+S.stepStone = function (v) { noise({ dur: 0.04, vol: 0.12 * v, f: 2400, type: 'highpass' }); tone({ f: 160, dur: 0.03, vol: 0.05 * v, type: 'triangle' }); };
+S.stepWood = function (v) { tone({ f: 190, f2: 120, dur: 0.06, vol: 0.14 * v, type: 'triangle' }); noise({ dur: 0.04, vol: 0.06 * v, f: 1200 }); };
+// what is underfoot: arena stone, bridge planks, the dirt trail, or grass either side of it
+A.surface = function (P) { var W = JO.World, x = P.pos.x, z = P.pos.z, L = W.level;
+  if (L && L.river && z < L.river.z0 + 1 && z > L.river.z1 - 1 && Math.abs(x) < 2.6) return 'stepWood';
+  if (z < W.A0 + 1) return 'stepStone';
+  return Math.abs(x - Math.sin(z * 0.07) * 1.2) < 2.8 ? 'step' : 'stepGrass'; };
 // footsteps: one place decides what a step sounds like (surface variants are added to A.surface later)
 A.footstep = function (P, sprinting) { var s = P.inWater ? 'splash' : ((A.surface && A.surface(P)) || 'step'); A.play(s, (sprinting ? 1.3 : 1) * (P.crouch ? 0.4 : 1)); };
 S.xb = function (v) { noise({ dur: 0.07, vol: 0.2 * v, f: 1400, type: 'bandpass' }); tone({ f: 240, f2: 120, dur: 0.09, vol: 0.2 * v, type: 'triangle' }); };
@@ -152,7 +161,7 @@ A.setIntensity = function (i) { A.intensity = i; };
 A.update = function (dt) {
   if (!ctx || A.muted) return;
   if (A.intensity < 0) { nextNote = ctx.currentTime + 0.1; return; }
-  var boss = A.intensity >= 1, sl = boss ? 0.17 : 0.27;
+  var boss = A.intensity >= 1, cb = A.combat || 0, sl = boss ? 0.17 : 0.27 - 0.07 * cb;
   if (nextNote < ctx.currentTime - 0.5) nextNote = ctx.currentTime + 0.05;
   while (nextNote < ctx.currentTime + 0.12) {
     var d = nextNote - ctx.currentTime, s = stepN % 16, b = BASS[s];
@@ -163,6 +172,11 @@ A.update = function (dt) {
       noise({ dur: 0.03, vol: 0.06, f: 7000, type: 'highpass', delay: d, dest: music });
       tone({ f: ARP[s], dur: sl * 0.8, vol: 0.05, type: 'square', delay: d, dest: music });
     } else {
+      // exploring: sparse. As enemies wake up (A.combat 0..1) a kick, snare and lead come in.
+      if (cb > 0.3) { if (s % 4 === 0) tone({ f: 110, f2: 45, dur: 0.14, vol: 0.4 * cb, type: 'sine', delay: d, dest: music });
+        if (s % 8 === 4) noise({ dur: 0.1, vol: 0.16 * cb, f: 1700, type: 'bandpass', delay: d, dest: music });
+        if (cb > 0.6) tone({ f: ARP[(s * 3) % 16] * 0.5, dur: sl * 0.7, vol: 0.035 * cb, type: 'square', delay: d, dest: music }); }
+      if (A.tense && s % 8 < 2) tone({ f: 58, f2: 40, dur: 0.12, vol: 0.5, type: 'sine', delay: d, dest: music });      // low health: a heartbeat under everything
       if (b) tone({ f: b, dur: sl * 1.6, vol: 0.2, type: 'triangle', delay: d, dest: music });
       if (s % 2 === 0) noise({ dur: 0.03, vol: 0.035, f: 6500, type: 'highpass', delay: d, dest: music });
       if (s === 12) tone({ f: 82, f2: 60, dur: 0.3, vol: 0.2, type: 'sine', delay: d, dest: music });
