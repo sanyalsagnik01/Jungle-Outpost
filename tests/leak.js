@@ -1,0 +1,22 @@
+const h = require('./h');
+const INIT = () => { window.__lk = { st: {}, live: new Map() };
+  const iv = setInterval(() => { if (!window.THREE) return; clearInterval(iv); const g = THREE.MathUtils.generateUUID; THREE.MathUtils.generateUUID = function () { const u = g(); const s = new Error().stack.split('\n').slice(2, 9).map(l => l.replace(/.*jungle-outpost\//, '').trim()).filter(l => !/three.min/.test(l)).slice(0, 4).join(' < '); __lk.st[u] = s; return u; };
+    const a = THREE.EventDispatcher.prototype.addEventListener; THREE.EventDispatcher.prototype.addEventListener = function (t, f) { if (t === 'dispose' && (this.isBufferGeometry || this.isTexture)) __lk.live.set(this.uuid, this); return a.call(this, t, f); };
+    const d = THREE.EventDispatcher.prototype.dispatchEvent; THREE.EventDispatcher.prototype.dispatchEvent = function (e) { if (e.type === 'dispose') __lk.live.delete(this.uuid); return d.call(this, e); }; }, 0); };
+(async () => {
+  const mode = process.argv[2] || 'reload';
+  const { browser, page, errors } = await h.launch({ w: 640, h: 360, init: INIT });
+  const diff = () => page.evaluate(() => { const cur = new Set(__lk.live.keys()); const prev = __lk.prev || new Set(); __lk.prev = cur; const by = {}; cur.forEach(u => { if (!prev.has(u)) { const o = __lk.live.get(u); const k = o.isTexture ? 'T ' + o.constructor.name + ' ' + (o.image ? (o.image.width + 'x' + o.image.height + ' ' + (o.image.tagName || 'data')) : 'noimg') + ' ' + o.name : 'G ' + o.type + ' v' + (o.attributes.position ? o.attributes.position.count : 0) + ' ' + o.name; by[k] = (by[k] | 0) + 1; } }); const inScene = new Set(); JO.World.scene.traverse(n => { if (n.geometry) inScene.add(n.geometry.uuid); const ms = n.material ? (Array.isArray(n.material) ? n.material : [n.material]) : []; ms.forEach(m => { for (const k in m) { const v = m[k]; if (v && v.isTexture) inScene.add(v.uuid); } if (m.uniforms) for (const k in m.uniforms) { const v = m.uniforms[k].value; if (v && v.isTexture) inScene.add(v.uuid); } }); }); const old = {}; cur.forEach(u => { if (prev.has(u) && !inScene.has(u)) { const o = __lk.live.get(u); const k = o.isTexture ? 'T ' + (o.image ? (o.image.width + 'x' + o.image.height + ' ' + (o.image.tagName || 'data')) : 'noimg') + ' ' + o.name : 'G ' + o.type + ' v' + (o.attributes.position ? o.attributes.position.count : 0); old[k] = (old[k] | 0) + 1; } }); by.__ORPHANS = JSON.stringify(old); let gone = 0; prev.forEach(u => { if (!cur.has(u)) gone++; }); return { n: cur.size, gone, by }; });
+  if (mode === 'reload') {
+    await h.start(page, 0, { quality: 'med', noRender: true });
+    for (let i = 0; i < 5; i++) { const r = await page.evaluate((i) => { const G = JO.Game, W = JO.World, m = W.renderer.info.memory; G.mode = ''; G.startRun(i % 2 ? 2 : 1); document.getElementById('btnDeploy').click(); G.debug.run(1, 6); JO.Post.render(W.scene, W.camera, 0.016); return [m.geometries, m.textures, W.scene.children.length]; }, i);
+      const d = await diff(); console.log('load', i, JSON.stringify(r), 'live', d.n, 'gone', d.gone); if (i >= 2) console.log(Object.entries(d.by).sort((a, b) => b[1] - a[1]).map(e => '   ' + e[1] + ' ' + e[0]).join('\n')); }
+  } else {
+    await h.start(page, 0, { quality: 'med', mode: 'survival', bot: true, noRender: true });
+    for (let min = 0; min <= 9; min++) { if (min) for (let k = 0; k < 6; k++) await page.evaluate(() => { const G = JO.Game; if (G.state !== 'playing') { document.getElementById('btnRetry').click(); G.debug.bot = true; G.debug.god = true; } G.debug.run(10, 4); });
+      const s = await page.evaluate(() => { const W = JO.World, m = W.renderer.info.memory; JO.Post.render(W.scene, W.camera, 0.016); const kinds = {}; W.scene.children.forEach(c => { const k = c.type + ':' + (c.name || (c.geometry && c.geometry.type) || ''); kinds[k] = (kinds[k] | 0) + 1; }); let nodes = 0; W.scene.traverse(() => nodes++); return { geo: m.geometries, tex: m.textures, kids: W.scene.children.length, nodes, kinds, wave: JO.Meta.wave }; });
+      const d = await diff(); console.log('min', min, s.geo, s.tex, s.kids, s.nodes, 'wave', s.wave); if (min >= 3) { console.log(Object.entries(d.by).sort((a, b) => b[1] - a[1]).map(e => '   ' + e[1] + ' ' + e[0]).join('\n')); const p = global.pk || {}; const ch = Object.keys(s.kinds).filter(k => s.kinds[k] !== p[k]).map(k => k + ' ' + (p[k] | 0) + '->' + s.kinds[k]); console.log('   kids:', ch.join(', ')); } global.pk = s.kinds; }
+  }
+  if (errors.length) console.log(errors.slice(0, 5).join('\n'));
+  await browser.close();
+})();

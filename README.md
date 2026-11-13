@@ -9,6 +9,24 @@ Open `index.html` in a current Chrome, Edge or Firefox. Click **START MISSION**,
 
 Everything the game needs is in this folder: Three.js r128 with its `GLTFLoader`, `SkeletonUtils` and post-processing passes in `lib/`, the models embedded in `models/models.bundle.js`, the story in `js/story.data.js`. It runs from `file://` and offline.
 
+## Living world
+
+The jungle reacts to you. Trees, bushes and grass move in the wind and part as you pass; birds scatter from gunfire, and the jungle goes quiet, then comes back. Shots leave marks and debris, bodies stay where they fall, lanterns can be shot out, and guards investigate noise, lose their nerve, retreat or surrender. Light shafts, ground fog, puddles after rain, positional sound with echo, and small scenes you can inspect with **E** fill in the rest.
+
+| Key | Action |
+|---|---|
+| L | Flashlight |
+| Z / V | Lean left / right |
+| T | Wipe rain off the lens |
+| Space at a ledge | Vault or climb |
+| H | Minimal HUD |
+| F2 | FPS and draw-call overlay |
+| F4 | Cycle graphics quality (Auto, High, Medium, Low) |
+
+Every effect has its own switch under **Settings > Living world**, and each scales with the quality tier. On Auto the game steps down by itself when the frame rate drops and says what it turned off. A gamepad works too, with vibration.
+
+Headless tests for all of this are in `tests/`.
+
 ## Story
 
 Kade, an engineer, is looking for his sister **Mira**, who was studying the **Lumen Bloom** in the valley. **Juno**, an ex-pilot with opinions, talks him through it over the radio. **The Commander** holds the outpost. **The Phantom** guards the ruins and can be spared once beaten (walk up and press **E**; **F** finishes him).
