@@ -52,7 +52,7 @@ function bucketOf(h) { return h < 5 ? 'night' : (h < 8 ? 'dawn' : (h < 16.5 ? 'd
 function pick(cast) { var tot = 0, i; for (i = 0; i < cast.length; i++) tot += cast[i][1]; var x = r() * tot; for (i = 0; i < cast.length; i++) { x -= cast[i][1]; if (x <= 0) return cast[i][0]; } return cast[0][0]; }
 Am.play = function (name, v) { Am.calls++; Am.last = name; if (!A.ctx || A.muted || !bus()) return; try { CALL[name](v === undefined ? 1 : v); } catch (e) { /* audio is never fatal */ } };
 // a loud noise: silence now, and for a while
-Am.silence = function () { var t = 14 + r() * 18; if (t > Am.hush) Am.hush = t; };
+Am.silence = function () { var t = 12 + r() * 20; if (t > Am.hush) Am.hush = t; };
 function dist(x, z) { var P = JO.Player; return P ? Math.hypot(x - P.pos.x, z - P.pos.z) : 0; }
 
 JO.Sys.add('ambience', {
@@ -68,7 +68,7 @@ JO.Sys.add('ambience', {
     var G = JO.Game, Wx = JO.Weather, on = Q.on('ambience'), playing = G.state === 'playing';
     if (A.combat > 0.3 && Am.hush < 8) Am.hush = 8;                   // a firefight counts as noise even when the player is not the one shooting
     if (Am.hush > 0 && dt > 0) Am.hush -= dt;
-    var want = !on || Am.hush > 0 || G.bossFight ? 0 : 1; Am.level += (want - Am.level) * Math.min(1, dt * (want ? 0.125 : 4)); if (want && Am.level > 0.995) Am.level = 1;
+    var want = !on || Am.hush > 0 || G.bossFight ? 0 : 1; Am.level = want ? Math.min(1, Am.level + dt / 8) : Am.level * Math.max(0, 1 - dt * 4);      // gone in a breath, back over eight seconds
     var h = Wx ? Wx.hour : 12, b = Am.bucket = bucketOf(h), night = b === 'night' ? 1 : (b === 'dusk' ? 0.6 : 0.15), rain = Wx ? Wx.rain : 0;
     // the steady insect bed in audio.js rises at night and dips with the life level
     if (A.ctx && A.insect) A.insect.gain.setTargetAtTime(0.012 + 0.05 * night * (0.25 + 0.75 * Am.level) * (1 - rain * 0.6), A.ctx.currentTime, 0.5);
