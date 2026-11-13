@@ -84,6 +84,8 @@ Po.render = function (scene, cam, real) {
   if (dof > 0) { try {
     if (!depthRT) { var ds = W.renderer.getDrawingBufferSize(new THREE.Vector2()); depthRT = new THREE.WebGLRenderTarget(Math.max(2, ds.x >> 1), Math.max(2, ds.y >> 1), { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
       depthRT.depthTexture = new THREE.DepthTexture(depthRT.width, depthRT.height); depthRT.depthTexture.type = THREE.UnsignedIntType; depthMat = new THREE.MeshBasicMaterial({ colorWrite: false }); }
+    // r128 picks one program per override material and does not re-check instance colours, so every instanced mesh must carry them
+    if (Po.depthFor !== W.group) { Po.depthFor = W.group; scene.traverse(function (o) { if (o.isInstancedMesh && !o.instanceColor) { var c = new Float32Array(o.instanceMatrix.count * 3); c.fill(1); o.instanceColor = new THREE.InstancedBufferAttribute(c, 3); } }); depthMat.needsUpdate = true; }
     var old = scene.overrideMaterial, bg = scene.background; scene.overrideMaterial = depthMat; scene.background = null; W.renderer.setRenderTarget(depthRT); W.renderer.clear(); W.renderer.render(scene, cam); W.renderer.setRenderTarget(null); scene.overrideMaterial = old; scene.background = bg;
     u.tDepth.value = depthRT.depthTexture; u.uFocus.value = Po.focus || 20; u.uNF.value.set(cam.near, cam.far); u.uPx.value.set(1 / depthRT.width, 1 / depthRT.height); Po.dofPasses = (Po.dofPasses | 0) + 1;
   } catch (e) { dof = 0; Po.dofK = 0; JO.Q.TABLE.dof = [0, 0, 0]; if (window.console) console.warn('[post] depth of field unavailable', e); } }

@@ -237,5 +237,6 @@ MP.update = function (dt) {
   var em = this.tint || 0; if (this.flashT > 0) { this.flashT -= dt; em = this.flashHex; }
   if (em !== this.emis) { this.emis = em; for (k = 0; k < this.mats.length; k++) this.mats[k].emissive.setHex(em); }
 };
-MP.dispose = function () { if (this.root.parent) this.root.parent.remove(this.root); var all = this.mats.concat(this.fxMats); for (var i = 0; i < all.length; i++) all[i].dispose(); if (this.mixer) this.mixer.stopAllAction(); };
+MP.dispose = function () { if (this.root.parent) this.root.parent.remove(this.root); var all = this.mats.concat(this.fxMats); for (var i = 0; i < all.length; i++) all[i].dispose(); if (this.mixer) this.mixer.stopAllAction();
+  this.root.traverse(function (o) { if (o.isSkinnedMesh && o.skeleton) o.skeleton.dispose(); }); };   // each clone owns a bone texture
 })();
