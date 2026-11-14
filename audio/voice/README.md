@@ -1,12 +1,12 @@
 # Voice lines
 
-Every spoken line in `story.json` has an `id` and a `voice` path of `audio/voice/<id>.mp3`. `lines.tsv` in this folder lists all 109 lines (file name, speaker, text).
+Every spoken line in `story.json` has an `id` and a `voice` path of `audio/voice/<id>.mp3`. `lines.tsv` in this folder lists all 158 lines (file name, speaker, text).
 
-No voice files ship yet: the ElevenLabs workspace was on the free tier and its generation queue was busy during the build, so nothing was generated and no credits were spent. Until files exist, each line is shown as a subtitle and "spoken" with a synthesized stand-in voice (a different pitch per speaker; Juno is band-limited like a radio).
+All 158 lines are voiced. They were generated with ElevenLabs (model Eleven v4) on the free tier in November 2026, about 6,900 credits, using the casting below, and checked against the script with an offline speech recognizer. The game only plays these local files; it never calls an API.
 
-## Adding real voices
+## Replacing or adding voices
 
-1. Generate each row of `lines.tsv` and save it here under the listed file name (MP3). At roughly one ElevenLabs credit per character the full set is about 5,000 credits.
+1. Generate each row of `lines.tsv` and save it here under the listed file name (MP3). Cost is about one ElevenLabs credit per character.
 2. Run `python tools/build_story.py`. It scans this folder and records which files exist in `story.json` / `js/story.data.js` (`voiceFiles`).
 3. Reload the game. Lines with a file play it; lines without keep the stand-in. A missing or broken file never stops the game.
 

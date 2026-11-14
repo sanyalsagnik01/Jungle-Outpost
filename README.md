@@ -134,7 +134,7 @@ A playtest bot drives the normal inputs: in the console, `JO.Game.debug.bot = tr
 
 ## Known limitations
 
-- No recorded voice files ship; every line uses the synthesized voice until MP3s are added to `audio/voice/`.
+- All 158 spoken lines are voiced (ElevenLabs Eleven v4, about 6,900 credits on the free tier). Delete a file from `audio/voice/` and rerun `python tools/build_story.py` to fall back to the synthesized voice for that line.
 - Held weapons follow the hand's position but not its rotation.
 - On-screen prompts name the default keys even after rebinding.
 - The jeep has simple arcade handling and no driver model.
