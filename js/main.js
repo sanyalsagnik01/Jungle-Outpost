@@ -265,7 +265,7 @@ function tick(real) {
     UI.update(real, cam);
   }
   if (Game.state !== 'paused') St.update(real); St.cutUpdate(real);
-  A.update(real);
+  A.update(real); if (JO.Music) JO.Music.update(real);
   if (dbgOn) { dbgT -= real; if (dbgT <= 0) { dbgT = 0.2; debugOverlay(real); } }
   JO.Weather.update(fdt, real); JO.Radar.update(real); JO.Meta.frame(real); JO.Sys.frame(fdt, real);
   if (!Game.debug.noRender) JO.Post.render(W.scene, cam, real);

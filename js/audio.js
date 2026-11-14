@@ -163,7 +163,7 @@ var ARP = [220, 261.6, 329.6, 440, 329.6, 261.6, 392, 329.6, 196, 246.9, 293.7, 
 A.setIntensity = function (i) { A.intensity = i; };
 A.update = function (dt) {
   if (!ctx || A.muted) return;
-  if (A.intensity < 0) { nextNote = ctx.currentTime + 0.1; return; }
+  if (A.intensity < 0 || A.seqOff) { nextNote = ctx.currentTime + 0.1; return; }   // seqOff: recorded music (music.js) is playing
   var boss = A.intensity >= 1, cb = A.combat || 0, sl = boss ? 0.17 : 0.27 - 0.07 * cb;
   if (nextNote < ctx.currentTime - 0.5) nextNote = ctx.currentTime + 0.05;
   while (nextNote < ctx.currentTime + 0.12) {
