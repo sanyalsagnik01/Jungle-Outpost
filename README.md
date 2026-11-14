@@ -1,11 +1,13 @@
 # JUNGLE OUTPOST
 
 A browser 3D third-person shooter. Three levels, six enemy types, three multi-phase bosses, a story with three endings, stealth, a skill tree and three extra modes.
-Characters, weapons and scenery are low-poly GLB models built in Blender; effects are Three.js primitives; all sound is WebAudio synthesis. No build step, no network calls at runtime.
+Characters, weapons and scenery are low-poly GLB models built in Blender; effects are Three.js primitives; character voices are generated with ElevenLabs; music and most sound effects are WebAudio synthesis. No build step, no network calls at runtime.
 
 ## Start
 
-Open `index.html` in a current Chrome, Edge or Firefox. Click **START MISSION**, then **DEPLOY** (the click also captures the mouse).
+**Play in the browser:** https://sanyalsagnik01.github.io/Jungle-Outpost/
+
+Or open `index.html` in a current Chrome, Edge or Firefox. Click **START MISSION**, then **DEPLOY** (the click also captures the mouse).
 
 Everything the game needs is in this folder: Three.js r128 with its `GLTFLoader`, `SkeletonUtils` and post-processing passes in `lib/`, the models embedded in `models/models.bundle.js`, the story in `js/story.data.js`. It runs from `file://` and offline.
 
@@ -140,3 +142,8 @@ A playtest bot drives the normal inputs: in the console, `JO.Game.debug.bot = tr
 - The jeep has simple arcade handling and no driver model.
 - Phase 7–10 balance (salvage prices, wave sizes, New Game+ scaling) has been tested by the bot, not tuned by hand.
 - Barrels, the gate, levers and the terminal are drawn with primitives; the matching GLBs in `models/` are only used as static scenery.
+
+## Credits
+
+- Voices (and generated sound effects in `audio/sfx/`): created with ElevenLabs, elevenlabs.io (free plan; non-commercial use).
+- Three.js r128 and its loaders and post-processing passes (MIT licence).
