@@ -1,7 +1,7 @@
 # JUNGLE OUTPOST
 
 A browser 3D third-person shooter. Three levels, six enemy types, three multi-phase bosses, a story with three endings, stealth, a skill tree and three extra modes.
-Characters, weapons and scenery are low-poly GLB models built in Blender; effects are Three.js primitives; character voices are generated with ElevenLabs; music and most sound effects are WebAudio synthesis. No build step, no network calls at runtime.
+Characters, weapons and scenery are low-poly GLB models built in Blender; effects are Three.js primitives; character voices and most sound effects are generated with ElevenLabs; music and interface sounds are WebAudio synthesis. No build step, no network calls at runtime.
 
 ## Start
 
@@ -145,5 +145,5 @@ A playtest bot drives the normal inputs: in the console, `JO.Game.debug.bot = tr
 
 ## Credits
 
-- Voices (and generated sound effects in `audio/sfx/`): created with ElevenLabs, elevenlabs.io (free plan; non-commercial use).
+- Voices (`audio/voice/`) and sound effects (`audio/sfx/`): created with ElevenLabs, elevenlabs.io (free plan; non-commercial use).
 - Three.js r128 and its loaders and post-processing passes (MIT licence).

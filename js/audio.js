@@ -1,6 +1,7 @@
 /* ============================================================
    JUNGLE OUTPOST — audio.js
-   Everything is synthesized with WebAudio: SFX, ambient bed
+   Synthesized with WebAudio: SFX (recorded takes from sfx.js
+   replace most of them when present), ambient bed
    (wind + insects from filtered noise) and a step-sequenced
    music loop that intensifies during boss fights.
    ============================================================ */
