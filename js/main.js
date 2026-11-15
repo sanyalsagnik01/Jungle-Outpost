@@ -332,7 +332,13 @@ Game.init = function () {
   window.addEventListener('resize', function () { W.resize(); FX.pMat.uniforms.uScale.value = window.innerHeight; });
   document.addEventListener('visibilitychange', function () { if (document.hidden && Game.state === 'playing') Game.pause(); });
 
-  bind('btnStart', function () { Game.mode = ''; Game.startRun(0); });
+  // a fresh campaign wipes the run and the bench (salvage, skills, mods); New Game+ and the modes keep them
+  Game.newGame = function () { var p = S.profile; p.salvage = 0; p.skills = {}; p.mods = {}; p.run = null; S.save(); Game.mode = ''; Game.startRun(0); };
+  bind('btnStart', function () { var p = S.profile;
+    if (!Game.hasSave() && !p.salvage && !Object.keys(p.skills).length && !Object.keys(p.mods).length) { Game.newGame(); return; }
+    UI.show('scrNewGame'); if (!I.isTouch) try { document.getElementById('btnNgNo').focus({ preventScroll: true }); } catch (e) { /* older browsers */ } });
+  bind('btnNgYes', function () { Game.newGame(); });
+  bind('btnNgNo', function () { UI.show('scrTitle'); });
   bind('btnContinue', function () { Game.mode = ''; Game.continueRun(); });
   bind('btnBench', function () { Pk.open(function () { UI.refreshTitle(); UI.show('scrTitle'); }); });
   bind('btnDoneBench', function () { Pk.open(function () { UI.show('scrDone'); }); });
