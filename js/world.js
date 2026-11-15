@@ -340,15 +340,24 @@ W.build = function (L) {
       var ax = s[3].alt[0] - s[1], az = s[3].alt[1] - s[2];        // zip-line between the two perches
       b.add('box', s[1] + ax / 2, 6.55, s[2] + az / 2, 0.05, 0.05, Math.hypot(ax, az), 0x222222, Math.atan2(ax, az)); } }
   }); });
-  var crateMat = lam(0xc9952a), crateDark = lam(0x3a3a2a);
-  (L.crates || []).forEach(function (c) {
+  // supply crates read as loot, not scenery: olive case, glowing amber bands, a ground ring and a faint beam that fade once opened
+  var crateMat = lam(0x5a6a3a), crateGlow = bas(0xffc23a), crateTrim = lam(0x22261a);
+  var ringGeo = new THREE.RingGeometry(0.95, 1.25, 40), beamGeo = new THREE.CylinderGeometry(0.16, 0.42, 7, 12, 1, true); W.owned.push(ringGeo, beamGeo);
+  (L.crates || []).forEach(function (c, ci) {
     var grp = new THREE.Group(); grp.position.set(c[0], 0, c[1]);
     var base = new THREE.Mesh(G.box, crateMat); base.scale.set(1.3, 0.8, 0.9); base.position.y = 0.4; grp.add(base);
-    var band = new THREE.Mesh(G.box, crateDark); band.scale.set(1.34, 0.14, 0.94); band.position.y = 0.4; grp.add(band);
+    var band = new THREE.Mesh(G.box, crateGlow); band.scale.set(1.34, 0.1, 0.94); band.position.y = 0.42; grp.add(band);
+    [-0.5, 0.5].forEach(function (bx) { var v = new THREE.Mesh(G.box, crateGlow); v.scale.set(0.08, 0.82, 0.94); v.position.set(bx, 0.4, 0); grp.add(v); });
+    var foot = new THREE.Mesh(G.box, crateTrim); foot.scale.set(1.38, 0.08, 0.98); foot.position.y = 0.04; grp.add(foot);
     var lid = new THREE.Group(); lid.position.set(0, 0.8, -0.45); grp.add(lid);
     var lm = new THREE.Mesh(G.box, crateMat); lm.scale.set(1.3, 0.14, 0.9); lm.position.set(0, 0.07, 0.45); lid.add(lm);
+    var lband = new THREE.Mesh(G.box, crateGlow); lband.scale.set(0.3, 0.16, 0.92); lband.position.set(0, 0.07, 0.45); lid.add(lband);
+    var rm = bas(0xffc23a, { transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    var ring = new THREE.Mesh(ringGeo, rm); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; grp.add(ring);
+    var bm = bas(0xffd56a, { transparent: true, opacity: 0.12, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    var beam = new THREE.Mesh(beamGeo, bm); beam.position.y = 3.6; grp.add(beam);
     g.add(grp); W.addBox(c[0], c[1], 0.65, 0.45, 0.94); reserve(c[0], c[1], 2.2);
-    W.crates.push({ x: c[0], z: c[1], opened: false, lid: lid, openT: 0 });
+    W.crates.push({ x: c[0], z: c[1], opened: false, lid: lid, openT: 0, ring: ring, beam: beam, rm: rm, bm: bm, ph: ci * 1.7 });
   });
   (L.pickups || []).forEach(function (p) { reserve(p[1], p[2], 1.6); });
   if (JO.Props) JO.Props.reserve(L, reserve);                  // gates, doors, barrels... keep random cover off them
@@ -529,7 +538,9 @@ W.update = function (dt) {
   for (i = 0; i < W.anim.length; i++) W.anim[i](dt, t);
   for (i = 0; i < W.checkpoints.length; i++) { var f = W.checkpoints[i].flag; f.pivot.rotation.y = Math.sin(t * 3 + i) * 0.3; f.bm.opacity = 0.12 + Math.sin(t * 2 + i) * 0.05; }
   if (W.flag && W.flag.grp.visible) { W.flag.pivot.rotation.y = Math.sin(t * 3) * 0.3; W.flag.bm.opacity = 0.2 + Math.sin(t * 4) * 0.08; }
-  for (i = 0; i < W.crates.length; i++) { var c = W.crates[i]; if (c.opened && c.openT < 1) { c.openT = Math.min(1, c.openT + dt * 3); c.lid.rotation.x = -1.9 * c.openT; } }
+  for (i = 0; i < W.crates.length; i++) { var c = W.crates[i]; if (c.opened && c.openT < 1) { c.openT = Math.min(1, c.openT + dt * 3); c.lid.rotation.x = -1.9 * c.openT; }
+    if (c.ring) { var pu = 0.5 + 0.5 * Math.sin(t * 3 + c.ph), fade = c.opened ? 1 - c.openT : 1; c.rm.opacity = (0.25 + pu * 0.35) * fade; c.bm.opacity = (0.07 + pu * 0.07) * fade;
+      var sc = 1 + pu * 0.12; c.ring.scale.set(sc, sc, 1); c.ring.visible = c.beam.visible = fade > 0.01; } }
   if (W.barriers) for (var k in W.barriers) { var B = W.barriers[k];
     if (B.open !== B.target) { B.open += (B.target > B.open ? 1 : -1) * dt * 1.1; B.open = Math.max(0, Math.min(1, B.open));
       if (Math.abs(B.open - B.target) < 0.02) B.open = B.target; if (B.target === 1 && B.open > 0.6) B.col.on = false; }

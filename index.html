@@ -330,19 +330,32 @@ body.touch #prompt{top:40%}
 
 <div id="scrControls" class="screen hidden">
   <h2>CONTROLS</h2>
-  <table class="ctl">
+  <div class="tabs" id="ctlTabs"><button data-tab="kb" class="on">KEYBOARD &amp; MOUSE</button><button data-tab="pad">CONTROLLER</button></div>
+  <table class="ctl" id="ctlKb">
     <tr><td>W A S D</td><td>Move</td></tr><tr><td>Mouse</td><td>Look / aim</td></tr>
     <tr><td>Left mouse</td><td>Shoot</td></tr><tr><td>Right mouse</td><td>Aim down sights (zoom, tighter spread)</td></tr>
     <tr><td>Shift</td><td>Sprint (uses stamina)</td></tr><tr><td>Space</td><td>Jump (clears shockwaves)</td></tr>
     <tr><td>C or Ctrl</td><td>Roll / dodge &mdash; brief invulnerability</td></tr><tr><td>R</td><td>Reload</td></tr>
     <tr><td>1 / 2 / 3</td><td>Assault rifle / Shotgun / Marksman rifle</td></tr><tr><td>4 / 5</td><td>Crossbow (silent) / Flamethrower</td></tr>
     <tr><td>G / Q</td><td>Throw frag grenade / smoke grenade</td></tr><tr><td>B</td><td>Field bench at a reached checkpoint (skills, weapon mods)</td></tr>
-    <tr><td>X</td><td>Crouch: quieter, harder to see</td></tr><tr><td>L</td><td>Flashlight: lights your way, gives you away</td></tr><tr><td>Z / V</td><td>Lean left / right around cover</td></tr><tr><td>Space at cover</td><td>Vault low cover, climb taller blocks</td></tr><tr><td>T</td><td>Wipe rain off the lens</td></tr><tr><td>H</td><td>Minimal HUD on / off</td></tr><tr><td>F2</td><td>FPS and draw-call overlay</td></tr><tr><td>Gamepad</td><td>Sticks move and look, triggers aim and fire, A jump, B roll, X reload / use, Y swap</td></tr><tr><td>F</td><td>Silent takedown from behind an unaware enemy</td></tr>
+    <tr><td>X</td><td>Crouch: quieter, harder to see</td></tr><tr><td>L</td><td>Flashlight: lights your way, gives you away</td></tr><tr><td>Z / V</td><td>Lean left / right around cover</td></tr><tr><td>Space at cover</td><td>Vault low cover, climb taller blocks</td></tr><tr><td>T</td><td>Wipe rain off the lens</td></tr><tr><td>H</td><td>Minimal HUD on / off</td></tr><tr><td>F2</td><td>FPS and draw-call overlay</td></tr><tr><td>F</td><td>Silent takedown from behind an unaware enemy</td></tr>
     <tr><td>E</td><td>Also: hack terminals, pull levers, drive the jeep</td></tr><tr><td>E</td><td>Open supply crates</td></tr>
     <tr><td>F4</td><td>Graphics quality: Auto / High / Medium / Low</td></tr><tr><td>Settings</td><td>Every key above can be rebound; sensitivity, volume, subtitles and accessibility live there too</td></tr><tr><td>Esc</td><td>Pause</td></tr><tr><td>M</td><td>Mute</td></tr>
   </table>
-  <div class="note" style="margin:0 0 14px">Tip: prefer <b>C</b> for rolling &mdash; browsers reserve Ctrl+W to close the tab.<br>
+  <div class="note" id="ctlKbNote" style="margin:0 0 14px">Tip: prefer <b>C</b> for rolling &mdash; browsers reserve Ctrl+W to close the tab.<br>
   On phones and tablets: left thumb moves, right thumb looks, buttons fire / jump / roll / reload.</div>
+  <table class="ctl hidden" id="ctlPad">
+    <tr><td>Left stick</td><td>Move</td></tr><tr><td>Right stick</td><td>Look / aim</td></tr>
+    <tr><td>RT (R2)</td><td>Shoot</td></tr><tr><td>LT (L2)</td><td>Aim down sights</td></tr>
+    <tr><td>Click left stick (L3)</td><td>Sprint (hold)</td></tr><tr><td>A (&#10005;)</td><td>Jump &mdash; vault and climb at cover</td></tr>
+    <tr><td>B (&#9675;)</td><td>Roll / dodge</td></tr><tr><td>X (&#9633;)</td><td>Reload &middot; open crates, hack, pull levers, drive (interact)</td></tr>
+    <tr><td>Y (&#9651;)</td><td>Next weapon</td></tr><tr><td>RB (R1)</td><td>Throw frag grenade</td></tr><tr><td>LB (L1)</td><td>Throw smoke grenade</td></tr>
+    <tr><td>Click right stick (R3)</td><td>Silent takedown from behind</td></tr>
+    <tr><td>D-pad up</td><td>Flashlight</td></tr><tr><td>D-pad down</td><td>Crouch</td></tr><tr><td>D-pad left / right</td><td>Lean left / right</td></tr>
+    <tr><td>View / Back (Share)</td><td>Field bench at a reached checkpoint</td></tr><tr><td>Menu / Start (Options)</td><td>Pause</td></tr>
+    <tr><td>A in menus</td><td>Press the highlighted button &middot; skip dialogue</td></tr>
+  </table>
+  <div class="note hidden" id="ctlPadNote" style="margin:0 0 14px">Xbox names shown, PlayStation in brackets. Any standard controller works: press a button once to wake it up.<br>Vibration can be switched off in Settings.</div>
   <button class="btn" id="btnControlsBack">BACK</button>
 </div>
 
@@ -357,6 +370,7 @@ body.touch #prompt{top:40%}
   <button class="btn" id="btnResume">RESUME</button>
   <button class="btn ghost" id="btnPauseCodex">CODEX</button>
   <button class="btn ghost" id="btnPauseSettings">SETTINGS</button>
+  <button class="btn ghost" id="btnPauseControls">CONTROLS</button>
   <button class="btn ghost" id="btnPauseRestart">RESTART LEVEL</button>
   <button class="btn ghost" id="btnPauseQuit">QUIT TO TITLE</button>
   <div class="note">WASD move &middot; Shift sprint &middot; Space jump &middot; C roll &middot; LMB shoot &middot; RMB aim &middot; R reload &middot; 1-5 weapons &middot; G frag &middot; Q smoke &middot; X crouch &middot; F takedown &middot; E interact &middot; B bench &middot; M mute</div>

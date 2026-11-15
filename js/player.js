@@ -50,7 +50,7 @@ P.animate = function (dt) {
     else k.play('run', Math.min(1.6, sp / 4.2));
   }
   k.update(dt);
-  if (P.chest && !P.dead) P.chest.rotateX(-aim * 0.55);
+  if (P.chest && !P.dead && dt > 0) P.chest.rotateX(-aim * 0.55);      // only on frames the mixer re-posed (a frozen pose would keep twisting)
   var cur = P.dead ? -1 : JO.Weapons.cur, w = P.wpn[cur];
   if (cur !== P.wpnCur) { for (i = 0; i < P.wpn.length; i++) if (P.wpn[i]) P.wpn[i].root.visible = i === cur; P.wpnCur = cur; }
   if (w && P.handR) { P.model.g.updateMatrixWorld(true); P.handR.getWorldPosition(tmpV); P.model.g.worldToLocal(tmpV); w.root.position.copy(tmpV); w.root.rotation.set(-aim, 0, 0); }

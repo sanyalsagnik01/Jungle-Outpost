@@ -145,7 +145,7 @@ function cpIndex(z) { for (var i = 0; i < W.checkpoints.length; i++) if (W.check
 // the field bench: open at any checkpoint flag you have reached
 Game.nearBench = function () { for (var i = 0; i < W.checkpoints.length; i++) { var cp = W.checkpoints[i]; if (cp.reached && Math.abs(P.pos.z - cp.z) < 7 && Math.abs(P.pos.x - (cp.x || 0)) < 9) return true; } return false; };
 Game.openBench = function () {
-  if (Game.state !== 'playing') return; Game.state = 'bench'; St.pause(true); I.exitLock(); I.clear(); A.setIntensity(-1); UI.refreshTouch();
+  if (Game.state !== 'playing') return; Game.state = 'bench'; Game.benchUsed = true; St.pause(true); I.exitLock(); I.clear(); A.setIntensity(-1); UI.refreshTouch();
   Pk.open(function () { St.pause(false); Game.saveRun(cpIndex(snap.cpZ)); Game.beginPlay(); });
 };
 Game.beginPlay = function () {
@@ -222,7 +222,8 @@ function step(dt) {
     if (Wp.slots[0].reserve < CFG.PLAYER.checkpointAmmo) Wp.slots[0].reserve = CFG.PLAYER.checkpointAmmo;      // flags double as a rifle resupply
     snap = takeSnap(0, cp.z + 1.5, cp.z);
     A.play('checkpoint'); UI.banner('CHECKPOINT — HEALED AND RESUPPLIED', 2.2, false); Ev.emit('checkpoint', Game.levelIdx, c); Game.saveRun(c); }
-  if (!Game.bossFight && !Game.mode && !Game.hint && E.count() === 0 && Game.nearBench()) { Game.hint = I.isTouch ? 'TAP <kbd>BENCH</kbd> — SKILLS AND WEAPON MODS' : 'PRESS <kbd>B</kbd> — FIELD BENCH: SKILLS AND WEAPON MODS'; Game.benchHere = true; if (I.benchPressed) { I.endStep(); Game.openBench(); return; } } else Game.benchHere = false;
+  var atBench = !Game.bossFight && !Game.mode && E.count() === 0 && Game.nearBench(); if (!atBench) Game.benchUsed = false;      // the prompt returns only after walking away and back
+  if (atBench && !Game.hint) { if (!Game.benchUsed) Game.hint = I.isTouch ? 'TAP <kbd>BENCH</kbd> — SKILLS AND WEAPON MODS' : 'PRESS <kbd>B</kbd> — FIELD BENCH: SKILLS AND WEAPON MODS'; Game.benchHere = true; if (I.benchPressed) { I.endStep(); Game.openBench(); return; } } else Game.benchHere = false;
   if (Game.mode === 'survival') JO.Meta.survivalStep(dt);
   else if (!Game.bossFight && !Game.bossDead && P.pos.z < W.A0 - 5) startBoss();
   if (Game.bossDead && Math.hypot(P.pos.x - W.flag.x, P.pos.z - W.flag.z) < (JO.Finale.mira ? 4.2 : 2.8)) { if (JO.Finale.mira) JO.Finale.begin(); else completeLevel(); I.endStep(); return; }
@@ -336,10 +337,15 @@ Game.init = function () {
   bind('btnBench', function () { Pk.open(function () { UI.refreshTitle(); UI.show('scrTitle'); }); });
   bind('btnDoneBench', function () { Pk.open(function () { UI.show('scrDone'); }); });
   UI.refreshTitle();
-  bind('btnControls', function () { UI.show('scrControls'); });
+  var ctlFrom = 'scrTitle';
+  function ctlTab(t) { var bs = document.getElementById('ctlTabs').querySelectorAll('button'); for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-tab') === t);
+    ['ctlKb', 'ctlKbNote'].forEach(function (id) { document.getElementById(id).classList.toggle('hidden', t !== 'kb'); }); ['ctlPad', 'ctlPadNote'].forEach(function (id) { document.getElementById(id).classList.toggle('hidden', t !== 'pad'); }); }
+  function openControls(from) { ctlFrom = from; ctlTab(JO.Feel && JO.Feel.padOn ? 'pad' : 'kb'); UI.show('scrControls'); }
+  document.getElementById('ctlTabs').addEventListener('click', function (e) { var t = e.target.getAttribute && e.target.getAttribute('data-tab'); if (!t) return; A.play('ui'); ctlTab(t); });
+  bind('btnControls', function () { openControls('scrTitle'); }); bind('btnPauseControls', function () { openControls('scrPause'); });
   bind('btnCodex', function () { JO.Codex.open('scrTitle'); }); bind('btnPauseCodex', function () { JO.Codex.open('scrPause'); });
   I.onCodex = function () { if (Game.state === 'playing') { togglePause(); if (Game.state === 'paused') JO.Codex.open('scrPause'); } };
-  bind('btnControlsBack', function () { UI.show('scrTitle'); });
+  bind('btnControlsBack', function () { UI.show(ctlFrom); });
   bind('btnDeploy', function () { Game.beginPlay(); UI.banner(CFG.LEVELS[Game.levelIdx].name, 2.2, false); Ev.emit('level_start', Game.levelIdx); });
   bind('btnResume', function () { pauseAt = performance.now(); Game.pause(); });
   bind('btnPauseRestart', Game.restartLevel); bind('btnPauseQuit', Game.toTitle);

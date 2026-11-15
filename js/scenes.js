@@ -114,7 +114,7 @@ JO.Sys.add('scenes', {
     if (G.state !== 'playing' || P.dead || P.driving) { Sc.near = null; return; }
     for (var i = 0; i < Sc.list.length; i++) { var s = Sc.list[i], dd = Math.hypot(s.x - P.pos.x, s.z - P.pos.z); if (dd < bd) { bd = dd; best = s; } }
     Sc.near = best; if (!best || G.bossFight || (A.combat || 0) > 0.3) return;
-    if (!G.hint && !P.nearCrate) G.hint = I.isTouch ? 'TAP <kbd>USE</kbd> — LOOK CLOSER' : 'PRESS <kbd>E</kbd> — LOOK CLOSER';
+    if (!G.hint && !P.nearCrate && !best.seen) G.hint = I.isTouch ? 'TAP <kbd>USE</kbd> — LOOK CLOSER' : 'PRESS <kbd>E</kbd> — LOOK CLOSER';
     if (I.interactPressed && !P.nearCrate) Sc.inspect(best);
   },
   frame: function (dt, real) {

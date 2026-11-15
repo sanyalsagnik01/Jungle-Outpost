@@ -17,7 +17,7 @@ var $ = function (id) { return document.getElementById(id); };
 /* ============================================================
    SETTINGS
    ============================================================ */
-var DEF = { sens: 1, invertY: false, volume: 1, music: 1, subSize: 1, colorblind: false, reduceShake: false, reduceFlash: false, aimAssist: false, adaptive: true, hitStop: true, minimap: true, weather: true, fps: false, keys: {} };
+var DEF = { sens: 1, invertY: false, volume: 1, music: 1, subSize: 1, colorblind: false, reduceShake: false, reduceFlash: false, aimAssist: false, adaptive: false, hitStop: true, minimap: true, weather: true, fps: false, keys: {} };
 var ACTIONS = [['forward', 'Move forward', 'KeyW'], ['back', 'Move back', 'KeyS'], ['left', 'Move left', 'KeyA'], ['right', 'Move right', 'KeyD'], ['sprint', 'Sprint', 'ShiftLeft'], ['jump', 'Jump', 'Space'],
   ['roll', 'Roll / dodge', 'KeyC'], ['crouch', 'Crouch', 'KeyX'], ['reload', 'Reload', 'KeyR'], ['interact', 'Interact', 'KeyE'], ['melee', 'Takedown / finish', 'KeyF'], ['frag', 'Frag grenade', 'KeyG'],
   ['smoke', 'Smoke grenade', 'KeyQ'], ['light', 'Flashlight', 'KeyL'], ['leanL', 'Lean left', 'KeyZ'], ['leanR', 'Lean right', 'KeyV'], ['wipe', 'Wipe the lens', 'KeyT'], ['bench', 'Field bench', 'KeyB'], ['codex', 'Codex', 'KeyJ'], ['mute', 'Mute', 'KeyM']];
@@ -36,6 +36,7 @@ M.get = function (k) { return set[k]; };
 M.apply = function () {
   var P = S.profile.settings, k, QD = JO.Q.DEF; for (k in DEF) if (P[k] === undefined) P[k] = typeof DEF[k] === 'object' ? {} : DEF[k];
   for (k in QD) if (P[k] === undefined) P[k] = QD[k]; set = M.set = P;
+  if (!P.adaptiveOff2) { P.adaptiveOff2 = true; P.adaptive = false; }      // adaptive difficulty became opt-in; older profiles had it on by default
   document.documentElement.style.setProperty('--sub', set.subSize); document.body.classList.toggle('cb', !!set.colorblind);
   A.volume = set.volume; A.musicVol = set.music; if (A.applyVolume) A.applyVolume();
   JO.FX.shakeK = set.reduceShake ? 0.25 : 1; JO.Game.reduceFlash = !!set.reduceFlash; JO.Radar.on = !!set.minimap; JO.Radar.palette(set.colorblind); JO.Weather.enabled = !!set.weather;

@@ -48,21 +48,44 @@ function portrait(key) {
 
 /* ---------- dialogue ---------- */
 function stopAudio() { if (curAudio) { try { curAudio.pause(); } catch (e) { /* ignore */ } curAudio = null; } }
-function playVoice(line, vol, onEnd, onErr) {
+// voices are fetched ahead of time so a line's audio starts with its subtitle (a cold fetch could lag it by a second on the web)
+var pre = {}, preQ = [], preBusy = false;
+function preload(line, front) { if (!line || !voices[line.id] || pre[line.id]) return; if (front) preQ.unshift(line); else preQ.push(line); pumpPre(); }
+function pumpPre() {
+  if (preBusy || !preQ.length) return; var line = preQ.shift(); if (pre[line.id]) { pumpPre(); return; }
+  preBusy = true; var au, done = false, fin = function () { if (done) return; done = true; preBusy = false; setTimeout(pumpPre, 30); };
+  try { au = new Audio(); au.preload = 'auto'; au.addEventListener('canplaythrough', fin); au.addEventListener('error', fin); au.src = line.voice; au.load(); pre[line.id] = au; } catch (e) { fin(); return; }
+  setTimeout(fin, 5000);
+}
+St.preloadLevel = function (i) {
+  var first = [], rest = [], k, ls;
+  for (k in byTrig) { ls = byTrig[k];
+    if (k === 'level_start:' + i || k.indexOf('checkpoint:' + i + ':') === 0) first = first.concat(ls);
+    else if (k.indexOf('bark:') !== 0) rest = rest.concat(ls); }
+  for (k in byTrig) if (k.indexOf('bark:') === 0) rest = rest.concat(byTrig[k]);
+  for (k = first.length - 1; k >= 0; k--) preload(first[k], true);
+  rest.forEach(function (l) { preload(l); });
+};
+function playVoice(line, vol, onEnd, onErr, onStart) {
   if (!voices[line.id] || A.muted || St.voiceVol <= 0) return null;
-  try { var au = new Audio(line.voice); au.volume = Math.max(0, Math.min(1, vol * St.voiceVol)); if (onEnd) au.addEventListener('ended', onEnd); if (onErr) au.addEventListener('error', onErr);
-    var p = au.play(); if (p && p.catch) p.catch(function () {}); return au; } catch (e) { return null; }
+  try { var au = pre[line.id];
+    if (au && (au.paused || au.ended) && au.readyState > 0) { try { au.currentTime = 0; } catch (e) { /* not seekable yet */ } }
+    else { au = new Audio(line.voice); if (!pre[line.id]) pre[line.id] = au; }
+    au.volume = Math.max(0, Math.min(1, vol * St.voiceVol)); au.onended = onEnd || null; au.onerror = onErr || null; au.onplaying = onStart || null;
+    var p = au.play(); if (p && p.catch) p.catch(function () { if (onErr) onErr(); }); return au; } catch (e) { return null; }
 }
 function show(line) {
   var sp = D.speakers[line.speaker] || { name: line.speaker.toUpperCase(), color: '#fff' };
   St.cur = { line: line, t: 0, shown: 0, len: line.text.length, hold: 1.5 + line.text.length * 0.028, voiced: false, ended: false, blipT: 0, blip: sp.blip || { pitch: 160, radio: 0 }, sylT: 0 };
   el.dlgName.textContent = sp.name; el.dlgName.style.color = sp.color; el.dlgPic.style.backgroundImage = 'url(' + portrait(line.speaker) + ')'; el.dlgPic.style.borderColor = sp.color;
   el.dlgText.textContent = ''; el.dlg.classList.remove('hidden');
-  stopAudio(); var c = St.cur; curAudio = playVoice(line, 1, function () { c.ended = true; }, function () { c.voiced = false; }); c.voiced = !!curAudio;
+  stopAudio(); var c = St.cur; curAudio = playVoice(line, 1, function () { c.ended = true; }, function () { c.voiced = false; c.wait = 0; }, function () { c.wait = 0; }); c.voiced = !!curAudio;
+  c.wait = c.voiced && curAudio.readyState < 3 ? 0.9 : 0;          // hold the typing until the voice actually starts (at most 0.9 s)
+  if (St.queue.length) preload(St.queue[0], true);
   if (A.play) A.play('radio', 0.5);
 }
 function next() { stopAudio(); St.cur = null; if (St.queue.length) show(St.queue.shift()); else el.dlg.classList.add('hidden'); }
-St.say = function (lines, front) { if (!St.enabled || !lines) return; lines = lines.length === undefined ? [lines] : lines;
+St.say = function (lines, front) { if (!St.enabled || !lines) return; lines = lines.length === undefined ? [lines] : lines; for (var j = lines.length - 1; j >= 0; j--) preload(lines[j], true);
   if (front) St.queue = lines.concat(St.queue); else for (var i = 0; i < lines.length; i++) St.queue.push(lines[i]); if (!St.cur) next(); };
 // fire a trigger: a sequence plays once per level load, variants pick one at random and obey their cooldown
 St.trigger = function (trig, force) {
@@ -77,10 +100,11 @@ St.skip = function () { if (St.cine) { St.cine.t = 0; return true; } if (!St.cur
 St.clear = function () { St.queue.length = 0; stopAudio(); St.cur = null; if (el.dlg) el.dlg.classList.add('hidden'); if (el.bark) el.bark.style.opacity = 0; barkCur = null; };
 St.reset = function () { St.clear(); fired = {}; St.endCine(); };
 St.busy = function () { return !!(St.cur || St.queue.length); };
-St.pause = function (on) { document.body.classList.toggle('paused', !!on); if (curAudio) { try { if (on) curAudio.pause(); else curAudio.play().catch(function () {}); } catch (e) { /* ignore */ } } };
+St.pause = function (on) { document.body.classList.toggle('paused', !!on); if (curAudio) { try { if (on) curAudio.pause(); else if (!curAudio.ended) curAudio.play().catch(function () {}); } catch (e) { /* ignore */ } } };
 
 St.update = function (dt) {
   clock += dt; var c = St.cur;
+  if (c && c.wait > 0) { c.wait -= dt; if (c.wait > 0) c = null; }
   if (c) { c.t += dt; var n = Math.min(c.len, (c.t * 45) | 0);
     if (n !== c.shown) { c.shown = n; el.dlgText.textContent = c.line.text.substr(0, n);
       if (!c.voiced && c.t > c.sylT && /[aeiouy]/i.test(c.line.text.charAt(n - 1))) { c.sylT = c.t + 0.07; A.syllable(c.blip.pitch, St.voiceVol, c.blip.radio); } }
@@ -177,7 +201,7 @@ St.init = function () {
   window.addEventListener('keydown', function (e) { if (e.repeat) return;
     if (cut) { if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); St.cutNext(); } else if (e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); St.cutSkip(); } }
     else if (e.code === 'Enter' && (JO.Game.state === 'playing' || JO.Game.state === 'finale' || JO.Game.state === 'win')) St.skip(); }, true);
-  Ev.on('level_load', function () { St.reset(); seenType = {}; headT.length = killT.length = 0; });
+  Ev.on('level_load', function (i) { St.reset(); St.preloadLevel(i | 0); seenType = {}; headT.length = killT.length = 0; });
   Ev.on('level_start', function (i) { St.trigger('level_start:' + i); });
   Ev.on('checkpoint', function (l, i) { St.trigger('checkpoint:' + l + ':' + i); });
   Ev.on('boss_start', function (b, first) { if (first) { St.clear(); St.startCine(b); } St.trigger('boss_intro:' + b.kind); });
